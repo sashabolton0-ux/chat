@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Chat</title>
+<style>
+html,body{height:100%;margin:0}
+body{display:grid;place-items:center;background:#111214;color:#dbdee1;font:16px system-ui,-apple-system,Segoe UI,sans-serif}
+main{text-align:center;padding:32px}
+button{border:0;border-radius:7px;padding:12px 20px;background:#5865f2;color:#fff;font-weight:700;cursor:pointer}
+button:hover{background:#4752c4}
+button:disabled{opacity:.6;cursor:wait}
+#status{margin-top:12px;color:#949ba4;font-size:13px;min-height:20px}
+</style>
+</head>
+<body>
+<main>
+<button id="launch" type="button">Launch Chat</button>
+<div id="status" aria-live="polite"></div>
+</main>
+<script>
+const CHAT_URL="https://cdn.jsdelivr.net/gh/sashabolton0-ux/chat@main/chat.html";
+
+async function launchChat(){
+  const button=document.getElementById("launch");
+  const status=document.getElementById("status");
+  button.disabled=true;
+  status.textContent="Loading Chat...";
+  const win=window.open("about:blank","_blank");
+  if(!win){status.textContent="Please allow pop-ups for this file, then try again.";button.disabled=false;return;}
+  try{
+    const response=await fetch(CHAT_URL+"?fresh="+Date.now(),{cache:"no-store"});
+    if(!response.ok) throw new Error("HTTP "+response.status);
+    const html=await response.text();
+    win.document.open();win.document.write(html);win.document.close();
+    status.textContent="";
+  }catch(error){
+    try{
+      const fallback="https://raw.githubusercontent.com/sashabolton0-ux/chat/main/chat.html?fresh="+Date.now();
+      const response=await fetch(fallback,{cache:"no-store"});
+      if(!response.ok) throw new Error("HTTP "+response.status);
+      const html=await response.text();
+      win.document.open();win.document.write(html);win.document.close();
+      status.textContent="";
+      return;
+    }catch(_){
+      try{win.close();}catch(_){}
+      status.textContent="Chat could not be loaded. Please try again.";
+      button.disabled=false;
+    }
+  }
+}
+document.getElementById("launch").addEventListener("click",launchChat);
+</script>
+</body>
+</html>
