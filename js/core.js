@@ -1,7 +1,7 @@
 
 window.CONFIG = {
-  SUPABASE_URL: "https://paqmtrirnuyecapcnxys.supabase.co",
-  SUPABASE_KEY: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBhcW10cmlybnV5ZWNhcGNueHlzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTA4MjQ1MTAsImV4cCI6MjEwNjQwMDUxMH0.1g3B2DWxmyG0dQEjW3_-U8YyLPH0RuAe4F8S_V1eP9M",
+  SUPABASE_URL: "https://chggbyitontubbujqcik.supabase.co",
+  SUPABASE_KEY: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNoZ2dieWl0b250dWJidWpxY2lrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTEwNTA1NzEsImV4cCI6MjEwNjYyNjU3MX0.Nuc_1kLV5XgNy7Fvar5YejriexPCgeCflJluZ3eyuv8",
   APP_VERSION: "6.1"
 };
 // Client version: 6 — keep this equal to server_settings.min_required_version.
