@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Chat Launcher Test</title>
+</head>
+<body>
+  <h1>Launcher is working</h1>
+
+  <button onclick="launchTest()">Launch Test</button>
+
+  <script>
+    function launchTest() {
+      const win = window.open("about:blank", "_blank");
+
+      win.document.write(`
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <title>Chat Test</title>
+        </head>
+        <body>
+          <h1>Loading...</h1>
+
+          <script src="https://cdn.jsdelivr.net/gh/sashabolton0-ux/chat@main/test.js"><\/script>
+        </body>
+        </html>
+      `);
+
+      win.document.close();
+    }
+  </script>
+</body>
+</html>
