@@ -1,2 +1,0 @@
-# chat
-Chat Web Client
