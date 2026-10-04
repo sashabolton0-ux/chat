@@ -336,7 +336,11 @@ let db = null;
 let clientBlocked = false;
 
 function makeDbClient() {
-  const username = sessionStorage.getItem("chat_username") || "";
+  const username =
+    (window.state && window.state.profile && window.state.profile.username) ||
+    (window.state && window.state.user && window.state.user.username) ||
+    sessionStorage.getItem("chat_username") ||
+    "";
   if (!CONFIG.SUPABASE_URL || !CONFIG.SUPABASE_KEY) return null;
   return window.supabase.createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_KEY, {
     global: { headers: username ? { "x-chat-username": username } : {} }
@@ -521,6 +525,7 @@ async function signUp(username, password) {
   if (error) throw error;
 
   state.user = { username: clean };
+  sessionStorage.setItem("chat_username", clean);
   refreshDbClient();
   return data;
 }
@@ -537,6 +542,7 @@ async function signIn(username, password) {
   if (!data) throw new Error("Incorrect username or password.");
 
   state.user = { username: data.username };
+  sessionStorage.setItem("chat_username", data.username);
   refreshDbClient();
   return data;
 }
@@ -545,6 +551,7 @@ async function signOut() {
   if (state.realtime) await db.removeChannel(state.realtime);
   state.user = null;
   state.profile = null;
+  sessionStorage.removeItem("chat_username");
   location.reload();
 }
 
