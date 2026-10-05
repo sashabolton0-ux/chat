@@ -31,10 +31,10 @@
       "file": "apps/jumper.html"
     },
     {
-      "name": "Astroid Blaster",
+      "name": "Asteroid Blaster",
       "icon": "👾",
       "description": "Shoot down aliens and destroy astroids! Thanks oscar",
-      "file": "apps/astroid_blaster.html"
+      "file": "apps/asteroid_blaster.html"
     }
   ]
 }
