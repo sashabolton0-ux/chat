@@ -47,7 +47,7 @@ dialog{border:0;border-radius:14px;background:#1b1f27;color:#eef0f4;box-shadow:0
 .user-state{font-size:.68rem;color:#747b87}
 .status-dot{width:8px;height:8px;border-radius:50%;display:block}
 .status-dot.online{background:#3ccf78}.status-dot.offline{background:#69717e}
-.message{padding:8px 0 10px}.message-continued{padding:1px 0 1px}.message-continued .message-content{margin-top:0}
+.message{padding:5px 0 8px}.message-continued{padding:1px 0 1px}.message-continued .message-content{margin-top:0}.message-divider{display:flex;align-items:center;gap:12px;margin:18px 0 12px;color:#949ba4;font-size:.75rem;font-weight:700}.message-divider::before,.message-divider::after{content:"";height:1px;background:#4a4d55;flex:1}.message-divider span{white-space:nowrap}
 @media(max-width:900px){.app{grid-template-columns:220px minmax(0,1fr)}.users-sidebar{display:none}}
 
 .auth-layout{width:min(940px,100%);display:grid;grid-template-columns:minmax(320px,430px) minmax(300px,1fr);gap:18px;align-items:stretch}
@@ -967,7 +967,90 @@ function renderMarkup(text,currentUsername){let s=escapeHtml(text);s=s.replace(/
 async function loadMessages(){if(!state.channel)return;const room=state.channel.is_dm?dmRoom(state.channel.dm_username):"channel:"+state.channel.id;const {data,error}=await db.from("messages").select("id,sender_username,message_text,created_at,recipient_username,is_dm,channel_id,room_id").eq("room_id",room).order("created_at",{ascending:true}).limit(100);if(error)throw error;state.messages=data||[];renderMessages()}
 async function sendMessage(text){if(!state.profile||state.profile.is_banned)throw new Error("Your account is unavailable.");if(!state.channel)return;const isDM=!!state.channel.is_dm;const room=isDM?dmRoom(state.channel.dm_username):"channel:"+state.channel.id;const {error}=await db.from("messages").insert({sender_username:state.profile.username,recipient_username:isDM?state.channel.dm_username:null,channel_id:isDM?null:state.channel.id,message_text:text,is_dm:isDM,room_id:room});if(error)throw error}
 window.sendMessage = sendMessage;
-async function renderMessages(){const box=document.getElementById("messages");if(!state.messages.length){box.innerHTML='<div class="empty">No messages yet. Start the conversation.</div>';return}const names=[...new Set(state.messages.map(m=>m.sender_username))];const {data:profiles}=await db.from("profiles").select("username,username_color,profile_tag").in("username",names);const map=Object.fromEntries((profiles||[]).map(p=>[p.username,p]));let previousSender=null,previousTime=0;box.innerHTML=state.messages.map(m=>{const p=map[m.sender_username]||{};const color=safeColor(p.username_color);const tag=p.profile_tag?`<span class="profile-tag">${escapeHtml(p.profile_tag)}</span>`:"";const time=new Date(m.created_at);const continued=previousSender===m.sender_username&&(time.getTime()-previousTime)<600000;const pingMe=new RegExp("@"+String(state.profile.username).replace(/[.*+?^${}()|[\]\\]/g,"\\$&")+"\\b","i").test(m.message_text);const invite=m.message_text.match(/invite\/([A-Za-z0-9_-]+)/);previousSender=m.sender_username;previousTime=time.getTime();let content;if(invite){const pos=m.message_text.indexOf(invite[0]);content=`${renderMarkup(m.message_text.slice(0,pos),state.profile.username)}<button type="button" class="invite-button" data-invite="${escapeHtml(invite[1])}">Join channel</button>${renderMarkup(m.message_text.slice(pos+invite[0].length),state.profile.username)}`}else content=renderMarkup(m.message_text,state.profile.username);return `<article class="message ${continued?"message-continued":""} ${pingMe?"mention-highlight":""}">${continued?"":`<div class="message-meta"><span class="message-username" style="color:${color}">${escapeHtml(m.sender_username)}</span>${tag}<time>${time.toLocaleTimeString([], {hour:"2-digit",minute:"2-digit"})}</time></div>`}<div class="message-content">${content}</div></article>`}).join("");box.querySelectorAll("[data-invite]").forEach(btn=>btn.onclick=()=>acceptInvite(btn.dataset.invite));box.scrollTop=box.scrollHeight}
+async function renderMessages(){
+  const box=document.getElementById("messages");
+  if(!state.messages.length){
+    box.innerHTML='<div class="empty">No messages yet. Start the conversation.</div>';
+    return;
+  }
+
+  const wasNearBottom=(box.scrollHeight-box.scrollTop-box.clientHeight)<120;
+  const oldScrollHeight=box.scrollHeight;
+  const oldScrollTop=box.scrollTop;
+
+  const names=[...new Set(state.messages.map(m=>m.sender_username))];
+  const {data:profiles}=await db.from("profiles")
+    .select("username,username_color,profile_tag")
+    .in("username",names);
+  const map=Object.fromEntries((profiles||[]).map(p=>[p.username,p]));
+
+  let previousSender=null, previousTime=0;
+  let html="";
+
+  for(const m of state.messages){
+    const p=map[m.sender_username]||{};
+    const color=safeColor(p.username_color);
+    const tag=p.profile_tag?`<span class="profile-tag">${escapeHtml(p.profile_tag)}</span>`:"";
+    const time=new Date(m.created_at);
+    const gap=time.getTime()-previousTime;
+
+    // A long inactivity gap gets a prominent date/time divider.
+    // Six hours is the inactivity threshold; this is independent of calendar day.
+    if(previousTime && gap>=6*60*60*1000){
+      const label=time.toLocaleString([],{
+        weekday:"long",
+        month:"long",
+        day:"numeric",
+        year:"numeric",
+        hour:"numeric",
+        minute:"2-digit"
+      });
+      html+=`<div class="message-divider"><span>${escapeHtml(label)}</span></div>`;
+    }
+
+    // Messages from the same sender stay grouped when they are close together.
+    const continued=previousSender===m.sender_username && gap<600000;
+
+    const pingMe=new RegExp(
+      "@"+String(state.profile.username).replace(/[.*+?^${}()|[\]\\]/g,"\\$&")+"\\b","i"
+    ).test(m.message_text);
+
+    const invite=m.message_text.match(/invite\/([A-Za-z0-9_-]+)/);
+    let content;
+
+    if(invite){
+      const pos=m.message_text.indexOf(invite[0]);
+      content=
+        `${renderMarkup(m.message_text.slice(0,pos),state.profile.username)}`+
+        `<button type="button" class="invite-button" data-invite="${escapeHtml(invite[1])}">Join channel</button>`+
+        `${renderMarkup(m.message_text.slice(pos+invite[0].length),state.profile.username)}`;
+    }else{
+      content=renderMarkup(m.message_text,state.profile.username);
+    }
+
+    html+=`<article class="message ${continued?"message-continued":""} ${pingMe?"mention-highlight":""}">`+
+      `${continued?"":`<div class="message-meta"><span class="message-username" style="color:${color}">${escapeHtml(m.sender_username)}</span>${tag}<time>${time.toLocaleTimeString([], {hour:"2-digit",minute:"2-digit"})}</time></div>`}`+
+      `<div class="message-content">${content}</div>`+
+      `</article>`;
+
+    previousSender=m.sender_username;
+    previousTime=time.getTime();
+  }
+
+  box.innerHTML=html;
+
+  box.querySelectorAll("[data-invite]").forEach(btn=>{
+    btn.onclick=()=>acceptInvite(btn.dataset.invite);
+  });
+
+  if(wasNearBottom){
+    box.scrollTop=box.scrollHeight;
+  }else{
+    // Keep the user's exact viewport when new messages arrive while they are reading history.
+    const heightDelta=box.scrollHeight-oldScrollHeight;
+    box.scrollTop=oldScrollTop+heightDelta;
+  }
+}
 async function acceptInvite(code){
   try{
     const {data,error}=await db.rpc("accept_channel_invite",{p_invite_code:code});
