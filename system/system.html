@@ -8,34 +8,28 @@
 *{box-sizing:border-box}
 html,body{margin:0;width:100%;height:100%;font-family:system-ui,-apple-system,Segoe UI,sans-serif;background:#111318;color:#fff}
 body{display:flex;overflow:hidden}
-#sidebar{width:240px;background:#181b22;border-right:1px solid #2b2f38;padding:18px;overflow:auto}
-#brand{font-size:20px;font-weight:700;margin-bottom:22px}
-.section{font-size:11px;text-transform:uppercase;color:#8d94a3;letter-spacing:.08em;margin:16px 8px 8px}
-.app{display:flex;align-items:center;gap:12px;width:100%;border:0;background:transparent;color:#ddd;text-align:left;padding:11px 10px;border-radius:9px;cursor:pointer}
-.app:hover{background:#272c35;color:#fff}
-.icon{width:30px;text-align:center;font-size:21px}
-.name{font-weight:600}
-.sub{font-size:12px;color:#8d94a3;margin-top:2px}
-#main{flex:1;display:flex;flex-direction:column;min-width:0}
-#top{height:56px;border-bottom:1px solid #2b2f38;display:flex;align-items:center;padding:0 20px;font-weight:700}
-#content{flex:1;display:grid;place-items:center;color:#9da4b2}
-#content .welcome{text-align:center}
-#content h1{color:#fff;margin:0 0 8px}
+#main{width:100%;height:100%;display:flex;flex-direction:column;min-width:0}
+#top{height:68px;border-bottom:1px solid #2b2f38;display:flex;align-items:center;padding:0 28px;font-weight:700;font-size:20px;flex-shrink:0}
+#content{flex:1;overflow:auto;padding:34px 38px;color:#9da4b2}
+#content .welcome{text-align:center;margin:0 auto 28px;max-width:900px}
+#content h1{color:#fff;margin:0 0 8px;font-size:30px}
+#apps{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:22px;max-width:1200px;margin:0 auto}
+.app{border:1px solid #2b2f38;background:#181b22;color:#ddd;border-radius:16px;cursor:pointer;min-height:180px;padding:22px 18px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;transition:transform .12s ease,background .12s ease,border-color .12s ease}
+.app:hover{background:#222731;border-color:#414856;transform:translateY(-2px);color:#fff}
+.icon{font-size:46px;line-height:1;margin-bottom:16px}
+.name{font-weight:700;font-size:17px}
+.sub{font-size:13px;color:#8d94a3;margin-top:6px}
 </style>
 </head>
 <body>
-<aside id="sidebar">
-  <div id="brand">SYSTEM</div>
-  <div class="section">Apps</div>
-  <div id="apps"></div>
-</aside>
 <main id="main">
-  <header id="top">Home</header>
+  <header id="top">SYSTEM</header>
   <section id="content">
     <div class="welcome">
-      <h1>Welcome</h1>
+      <h1>Apps</h1>
       <div>Select an app to begin.</div>
     </div>
+    <div id="apps"></div>
   </section>
 </main>
 <script>
