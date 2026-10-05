@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    
+    <!-- Tab Name -->
+    <title>Blackjack Club 4</title>
+    
+    <!-- Modern SVG Emoji Favicon Configuration -->
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://w3.org' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E🃏%3C/text%3E%3C/svg%3E">
+
+    <style>
+        :root {
+            --felt-green: #0f5132;
+            --felt-shadow: #08311e;
+            --wood-rim: #3d1d0a;
+            --gold-accent: #f1c40f;
+            --active-blue: #2980b9;
+            --divider-line: rgba(255, 255, 255, 0.25);
+            --card-w: 60px;
+            --card-h: 90px;
+        }
+        body {
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            background: #111; color: #fff; margin: 0; padding: 20px;
+            display: flex; flex-direction: column; align-items: center;
+            min-height: 100vh; box-sizing: border-box; position: relative;
+        }
+        .floating-admin-console {
+            position: absolute; top: 20px; right: 20px; z-index: 10;
+            background: rgba(20, 20, 20, 0.9); padding: 12px 16px;
+            border: 1px solid rgba(255, 255, 255, 0.15); border-radius: 10px;
+            display: flex; align-items: center; gap: 12px; box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+        }
+        .floating-admin-console label { font-size: 0.85rem; font-weight: bold; color: #bdc3c7; }
+        .floating-admin-console select { background: #2a2a2a; color: #fff; border: 1px solid #444; padding: 6px 10px; border-radius: 5px; font-weight: bold; cursor: pointer; }
+        .btn-system { background: #c0392b; color: #fff; border: none; padding: 6px 12px; font-size: 0.85rem; font-weight: bold; border-radius: 5px; cursor: pointer; }
+        .btn-system:hover { background: #a93226; }
+        .keybind-legend-panel {
+            position: absolute; top: 75px; right: 20px; z-index: 10; width: 195px;
+            background: rgba(15, 15, 15, 0.85); border: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 10px 14px; border-radius: 8px; box-shadow: 0 6px 16px rgba(0,0,0,0.4);
+            font-size: 0.75rem; line-height: 1.5; color: #bdc3c7;
+        }
+        .keybind-legend-panel h3 { margin: 0 0 6px 0; font-size: 0.8rem; color: var(--gold-accent); text-transform: uppercase; letter-spacing: 1px; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 4px; }
+        .key-row { display: flex; justify-content: space-between; margin-bottom: 2px; }
+        .key-cap { background: #333; color: #fff; padding: 1px 5px; border-radius: 3px; font-family: monospace; font-weight: bold; border-bottom: 2px solid #555; }
+        .casino-arena {
+            width: 100%; max-width: 960px; padding: 30px 20px; box-sizing: border-box; margin-top: 135px;
+            background: radial-gradient(circle at top, var(--felt-green) 35%, var(--felt-shadow) 85%);
+            border: 16px solid var(--wood-rim); border-radius: 40px 40px 400px 400px;
+            box-shadow: 0 30px 60px rgba(0,0,0,0.9), inset 0 4px 25px rgba(0,0,0,0.7);
+            display: flex; flex-direction: column; align-items: center;
+        }
+        .dealer-felt-zone { width: 100%; text-align: center; padding-bottom: 20px; }
+        .table-divider-arc { width: 85%; height: 2px; background: linear-gradient(90deg, transparent, var(--divider-line) 20%, var(--divider-line) 80%, transparent); margin: 15px 0 25px 0; box-shadow: 0 2px 4px rgba(0,0,0,0.3); }
+        .player-felt-zone { display: flex; justify-content: center; gap: 14px; width: 100%; flex-wrap: wrap; }
+        .player-pod {
+            background: rgba(0, 0, 0, 0.4); border: 2px dashed rgba(255, 255, 255, 0.12); border-radius: 14px;
+            padding: 12px 8px; flex: 1; min-width: 115px; max-width: 170px; text-align: center;
+            box-shadow: inset 0 4px 10px rgba(0,0,0,0.5); transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .player-pod.active-turn { border-color: var(--active-blue); box-shadow: 0 0 20px rgba(41, 128, 185, 0.55); background: rgba(41, 128, 185, 0.08); transform: translateY(-4px); }
+        .nickname-input { background: transparent; border: none; border-bottom: 1px dashed rgba(255, 255, 255, 0.4); color: #fff; text-align: center; font-size: 0.8rem; font-weight: bold; width: 85%; padding: 2px; text-transform: uppercase; letter-spacing: 1px; }
+        .nickname-input:focus { outline: none; border-bottom: 1px solid var(--active-blue); color: var(--gold-accent); }
+        .score-pill { background: var(--gold-accent); color: #111; padding: 1px 6px; border-radius: 6px; font-weight: bold; font-size: 0.75rem; margin-left: 2px; display: inline-block; }
+        .pod-metrics { font-size: 0.75rem; margin-top: 8px; color: #d5dbdb; line-height: 1.4; }
+        .card-row { display: flex; justify-content: center; gap: 4px; min-height: var(--card-h); margin: 8px 0; flex-wrap: wrap; }
+        .playing-card { width: var(--card-w); height: var(--card-h); background: #fff; color: #111; border-radius: 5px; display: flex; flex-direction: column; justify-content: space-between; padding: 5px; box-sizing: border-box; font-weight: bold; font-size: 0.9rem; box-shadow: 0 4px 8px rgba(0,0,0,0.4); }
+        .playing-card.red { color: #d32f2f; }
+        .playing-card.down { background: linear-gradient(135deg, #2c3e50 25%, #34495e 25%, #34495e 50%, #2c3e50 50%, #2c3e50 75%, #34495e 75%, #34495e 100%); background-size: 8px 8px; border: 1px solid #fff; }
+        .suit-vector { font-size: 1.4rem; align-self: center; line-height: 1; }
+        .hud-dashboard { width: 100%; background: rgba(10, 10, 10, 0.85); border-radius: 14px; padding: 16px; margin-top: 20px; box-sizing: border-box; border: 1px solid rgba(255,255,255,0.1); }
+        .marquee-alert { text-align: center; font-size: 1.1rem; font-weight: bold; min-height: 24px; margin-bottom: 14px; color: #fff; }
+        .tray-chips { display: flex; justify-content: center; gap: 10px; margin-bottom: 16px; flex-wrap: wrap; }
+        .casino-token { width: 44px; height: 44px; border-radius: 50%; border: 2px dashed #fff; display: flex; justify-content: center; align-items: center; font-weight: bold; font-size: 0.8rem; cursor: pointer; box-shadow: 0 4px 6px rgba(0,0,0,0.4); user-select: none; }
+        .casino-token:active:not(.locked) { transform: scale(0.92); }
+        .casino-token.locked { opacity: 0.25; cursor: not-allowed; }
+        .token-10 { background: #2980b9; }
+        .token-25 { background: #27ae60; }
+        .token-100 { background: #8e44ad; }
+        .token-clr { background: #7f8c8d; border-style: solid; }
+        .token-all { background: #d35400; border-style: solid; }
+        .row-buttons { display: flex; justify-content: center; gap: 10px; }
+        .btn-hud { flex: 1; padding: 12px; font-size: 0.85rem; font-weight: bold; border: none; border-radius: 20px; cursor: pointer; text-transform: uppercase; }
+        .btn-hud:disabled { opacity: 0.2; cursor: not-allowed; }
+        .b-deal { background: var(--gold-accent); color: #111; }
+        .b-hit { background: #2ecc71; color: #fff; }
+        .b-stand { background: #e74c3c; color: #fff; }
+    </style>
+</head>
+<body>
+    <div class="floating-admin-console">
+        <label for="seat-config">Seats:</label>
+        <select id="seat-config" onchange="alterSeatCapacity(this.value)">
+            <option value="1">1 Player</option>
+            <option value="2">2 Players</option>
+            <option value="3">3 Players</option>
+            <option value="4">4 Players</option>
+            <option value="5">5 Players</option>
+            <option value="6">6 Players</option>
+            <option value="7">7 Players</option>
+        </select>
+        <button class="btn-system" onclick="wipeTableReset()">Reset</button>
+    </div>
+    <div class="keybind-legend-panel">
+        <h3>Keyboard Guide</h3>
+        <div class="key-row"><span>Deal Hand</span><span class="key-cap">Space</span></div>
+        <div class="key-row"><span>Hit Card</span><span class="key-cap">F</span></div>
+        <div class="key-row"><span>Stand Stay</span><span class="key-cap">J</span></div>
+        <div class="key-row"><span>Add $10</span><span class="key-cap">1</span></div>
+        <div class="key-row"><span>Add $25</span><span class="key-cap">2</span></div>
+        <div class="key-row"><span>Add $100</span><span class="key-cap">3</span></div>
+        <div class="key-row"><span>All In</span><span class="key-cap">0</span></div>
+        <div class="key-row"><span>Clear Bet</span><span class="key-cap">Del</span></div>
+    </div>
+    <div class="casino-arena">
+        <div class="dealer-felt-zone">
+            <div class="label-badge" style="letter-spacing: 2px;">Dealer Hand <span class="score-pill" id="d-score">0</span></div>
+            <div class="card-row" id="d-cards"></div>
+        </div>
+        <div class="table-divider-arc"></div>
+        <div class="player-felt-zone" id="pods-root"></div>
+        <div class="hud-dashboard">
+            <div class="marquee-alert" id="table-alert">Set player bets to open action!</div>
+            <div class="tray-chips">
+                <div class="casino-token token-10" onclick="appendStake(10)">+$10</div>
+                <div class="casino-token token-25" onclick="appendStake(25)">+$25</div>
+                <div class="casino-token token-100" onclick="appendStake(100)">+$100</div>
+                <div class="casino-token token-all" onclick="processAllInStake()">All In</div>
+                <div class="casino-token token-clr" onclick="purgeActiveStake()">Clear</div>
+            </div>
+            <div class="row-buttons">
+                <button class="btn-hud b-deal" id="btn-deal" onclick="commitRoundOpening()">Deal Round</button>
+                <button class="btn-hud b-hit" id="btn-hit" onclick="triggerHitAction()">Hit</button>
+                <button class="btn-hud b-stand" id="btn-stand" onclick="triggerStandAction()">Stand</button>
+            </div>
+        </div>
+    </div>
+    <script>
+        let tableState = { deck: [], dealer: { hand: [], score: 0 }, players: [], activePodIndex: 0, bettingPhaseActive: true, roundExecutionActive: false, seatCount: 1 };
+        const standardSuits = ['♠', '♥', '♦', '♣'], standardValues = ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'];
+        function manufactureDeck() {
+            let stack = [];
+            for (let i = 0; i < 4; i++) {
+                for (let s of standardSuits) {
+                    for (let v of standardValues) { stack.push({ suit: s, value: v }); }
+                }
+            }
+            return stack;
+        }
+        function shuffleStack(stackArray) {
+            for (let i = stackArray.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [stackArray[i], stackArray[j]] = [stackArray[j], stackArray[i]];
+            }
+            return stackArray;
+        }
+        function safetyPopCard() {
+            if (!tableState.deck || tableState.deck.length === 0) { tableState.deck = shuffleStack(manufactureDeck()); }
+            return tableState.deck.pop();
+        }
+        function tallyScore(handArray) {
+            let total = 0, aceTally = 0;
+            for (let c of handArray) {
+                if (!c) continue;
+                if (c.value === 'A') { aceTally++; total += 11; }
+                else if (['J', 'Q', 'K'].includes(c.value)) { total += 10; }
+                else { total += parseInt(c.value); }
+            }
+            while (total > 21 && aceTally > 0) { total -= 10; aceTally--; }
+            return total;
+        }
+        function alterSeatCapacity(quantity) { tableState.seatCount = parseInt(quantity); wipeTableReset(); }
+        function wipeTableReset() {
+            let existingNicknames = tableState.players.map(p => p.name);
+            tableState.players = [];
+            for (let i = 1; i <= tableState.seatCount; i++) {
+                tableState.players.push({
+                    id: i, name: existingNicknames[i - 1] || `Player ${i}`, hand: [], score: 0, bet: 0, bank: 500, statusMsg: "Wager Phase", busted: false, stood: false, isEliminated: false
+                });
+            }
+            tableState.activePodIndex = 0; tableState.bettingPhaseActive = true; tableState.roundExecutionActive = false; tableState.dealer = { hand: [], score: 0 };
+            tableState.deck = shuffleStack(manufactureDeck());
+            reconstructPodsHTML(); refreshTableUI(true); updateStatusMessage();
+        }
+        function catchNameChange(id, explicitValue) {
+            let matchedPlayer = tableState.players.find(p => p.id === id);
+            if (matchedPlayer) { matchedPlayer.name = explicitValue.trim() !== "" ? explicitValue : `Player ${id}`; }
+        }
+        function appendStake(value) {
+            if (!tableState.bettingPhaseActive) return;
+            let client = tableState.players[tableState.activePodIndex]; if (client.isEliminated) return;
+            if (client.bank >= value) { client.bet += value; client.bank -= value; client.statusMsg = `Wager: $${client.bet}`; refreshTableUI(true); }
+        }
+        function processAllInStake() {
+            if (!tableState.bettingPhaseActive) return;
+            let client = tableState.players[tableState.activePodIndex]; if (client.isEliminated) return;
+            if (client.bank > 0) { client.bet += client.bank; client.bank = 0; client.statusMsg = `All In: $${client.bet}`; refreshTableUI(true); }
+        }
+        function purgeActiveStake() {
+            if (!tableState.bettingPhaseActive) return;
+            let client = tableState.players[tableState.activePodIndex]; if (client.isEliminated) return;
+            client.bank += client.bet; client.bet = 0; client.statusMsg = "Wager Phase"; refreshTableUI(true);
+        }
+        function reconstructPodsHTML() {
+            document.getElementById('pods-root').innerHTML = tableState.players.map(p => `
+                <div class="player-pod" id="pod-uid-${p.id}">
+                    <div>
+                        <input type="text" class="nickname-input" value="${p.name}" oninput="catchNameChange(${p.id}, this.value)" placeholder="Tap to name...">
+                        <span class="score-pill" id="score-puid-${p.id}">0</span>
+                    </div>
+                    <div class="card-row" id="cards-puid-${p.id}"></div>
+                    <div class="pod-metrics" id="metrics-puid-${p.id}">Bank: $500<br>Bet: $0</div>
+                </div>
+            `).join('');
+        }
+        function generateCardVector(cardObject, maskFace = false) {
+            if (maskFace) return '<div class="playing-card down"></div>'; if (!cardObject) return '';
+            const crimsonHex = (cardObject.suit === '♥' || cardObject.suit === '♦') ? 'red' : '';
+            return `<div class="playing-card ${crimsonHex}"><div>${cardObject.value}</div><div class="suit-vector">${cardObject.suit}</div><div style="align-self: flex-end; transform: rotate(180deg);">${cardObject.value}</div></div>`;
+        }
+        function refreshTableUI(suppressDealerSecret) {
+            tableState.players.forEach((p, idx) => {
+                const podElement = document.getElementById(`pod-uid-${p.id}`);
+                if (podElement) { if (tableState.activePodIndex === idx && (tableState.bettingPhaseActive || tableState.roundExecutionActive)) podElement.classList.add('active-turn'); else podElement.classList.remove('active-turn'); }
+                const cardsContainer = document.getElementById(`cards-puid-${p.id}`), scoreContainer = document.getElementById(`score-puid-${p.id}`), metricsContainer = document.getElementById(`metrics-puid-${p.id}`);
+                if (cardsContainer) cardsContainer.innerHTML = p.hand.map(c => generateCardVector(c)).join('');
+                if (scoreContainer) scoreContainer.innerText = tallyScore(p.hand);
+                if (metricsContainer) metricsContainer.innerHTML = `Bank: $${p.bank}<br>Bet: $${p.bet}<br><strong>${p.statusMsg}</strong>`;
+            });
+            const dCardsContainer = document.getElementById('d-cards'), dScoreContainer = document.getElementById('d-score');
+            if (dCardsContainer && dScoreContainer) {
+                if (suppressDealerSecret || tableState.dealer.hand.length === 0) {
+                    if (tableState.dealer.hand.length > 0) { 
+                        // FIX: Target the explicit index [0] item card object inside the dealer hand array list
+                        dCardsContainer.innerHTML = generateCardVector(tableState.dealer.hand[0], false) + generateCardVector(null, true); 
+                        let firstCardValue = tableState.dealer.hand[0].value;
+                        dScoreContainer.innerText = firstCardValue === 'A' ? 11 : (['J', 'Q', 'K'].includes(firstCardValue) ? 10 : parseInt(firstCardValue)); 
+                    }
+                    else { dCardsContainer.innerHTML = ''; dScoreContainer.innerText = 0; }
+                } else { dCardsContainer.innerHTML = tableState.dealer.hand.map(c => generateCardVector(c)).join(''); dScoreContainer.innerText = tallyScore(tableState.dealer.hand); }
+            }
+            let currentPl = tableState.players[tableState.activePodIndex] || { isEliminated: false };
+            document.getElementById('btn-deal').disabled = !tableState.bettingPhaseActive;
+            document.getElementById('btn-hit').disabled = !tableState.roundExecutionActive || currentPl.isEliminated;
+            document.getElementById('btn-stand').disabled = !tableState.roundExecutionActive || currentPl.isEliminated;
+            document.querySelectorAll('.casino-token').forEach(t => { if (tableState.bettingPhaseActive && !currentPl.isEliminated) t.classList.remove('locked'); else t.classList.add('locked'); });
+        }
+        function updateStatusMessage() {
+            const marquee = document.getElementById('table-alert'); let activeClient = tableState.players[tableState.activePodIndex]; if (!activeClient) return;
+            if (tableState.bettingPhaseActive) { marquee.innerText = activeClient.isEliminated ? `${activeClient.name} is Bankrupt! Press Space to pass.` : `Wager Stage: ${activeClient.name}, lock in your stakes!`; }
+            else if (tableState.roundExecutionActive) { marquee.innerText = `Action Turn: ${activeClient.name}, hit or stand?`; }
+        }
+        function commitRoundOpening() {
+            if (!tableState.bettingPhaseActive) return;
+            let activeClient = tableState.players[tableState.activePodIndex];
+            if (!activeClient.isEliminated && activeClient.bet <= 0) { document.getElementById('table-alert').innerText = `${activeClient.name} must place a chip stake!`; return; }
+            if (tableState.activePodIndex < tableState.seatCount - 1) { tableState.activePodIndex++; refreshTableUI(true); updateStatusMessage(); if (tableState.players[tableState.activePodIndex].isEliminated) setTimeout(() => { updateStatusMessage(); }, 150); }
+            else {
+                if (!tableState.players.some(p => p.bet > 0)) { document.getElementById('table-alert').innerText = "No bets active! Reset table to start over."; return; }
+                tableState.players.forEach(p => { p.hand = []; p.busted = false; p.stood = false; }); tableState.dealer.hand = []; refreshTableUI(true);
+                tableState.bettingPhaseActive = false; tableState.roundExecutionActive = true; tableState.activePodIndex = 0;
+                tableState.players.forEach(p => { if (!p.isEliminated) { p.hand = [safetyPopCard(), safetyPopCard()]; p.statusMsg = "In Play"; } else p.statusMsg = "Bankrupt Out"; });
+                tableState.dealer.hand = [safetyPopCard(), safetyPopCard()];
+                if (tableState.players[tableState.activePodIndex].isEliminated) shiftToNextActor(); else { refreshTableUI(true); updateStatusMessage(); bypassAssessment(); }
+            }
+        }
+        function bypassAssessment() { let activeClient = tableState.players[tableState.activePodIndex]; if (tallyScore(activeClient.hand) === 21) { activeClient.statusMsg = "Natural 21!"; shiftToNextActor(); } }
+        function triggerHitAction() {
+            if (!tableState.roundExecutionActive) return; let activeClient = tableState.players[tableState.activePodIndex]; if (activeClient.isEliminated) return;
+            activeClient.hand.push(safetyPopCard());
+            if (tallyScore(activeClient.hand) > 21) { activeClient.statusMsg = "Bust!"; activeClient.busted = true; shiftToNextActor(); }
+            else if (tallyScore(activeClient.hand) === 21) { activeClient.statusMsg = "21 Locked"; shiftToNextActor(); } else refreshTableUI(true);
+        }
+        function triggerStandAction() { if (!tableState.roundExecutionActive) return; let activeClient = tableState.players[tableState.activePodIndex]; if (activeClient.isEliminated) return; activeClient.statusMsg = "Stood"; activeClient.stood = true; shiftToNextActor(); }
+        function shiftToNextActor() {
+            if (tableState.activePodIndex < tableState.seatCount - 1) { tableState.activePodIndex++; if (tableState.players[tableState.activePodIndex].isEliminated) shiftToNextActor(); else { refreshTableUI(true); updateStatusMessage(); bypassAssessment(); } }
+            else runDealerHouseLogic();
+        }
+        function runDealerHouseLogic() {
+            tableState.roundExecutionActive = false; tableState.activePodIndex = -1; let currentDealerScore = tallyScore(tableState.dealer.hand);
+            if (tableState.players.some(p => !p.busted && !p.isEliminated)) { while (currentDealerScore < 17) { tableState.dealer.hand.push(safetyPopCard()); currentDealerScore = tallyScore(tableState.dealer.hand); } }
+            settlePayoutDistributions(currentDealerScore);
+        }
+        function settlePayoutDistributions(finalDealerScore) {
+            tableState.players.forEach(p => {
+                if (p.isEliminated) return; let pScore = tallyScore(p.hand);
+                if (p.busted) p.statusMsg = "Lost Wager"; else if (finalDealerScore > 21) { p.bank += p.bet * 2; p.statusMsg = "Won! Dealer Bust"; } else if (pScore > finalDealerScore) { p.bank += p.bet * 2; p.statusMsg = "Won Hand!"; } else if (pScore < finalDealerScore) p.statusMsg = "Dealer Wins"; else { p.bank += p.bet; p.statusMsg = "Push (Tie)"; }
+                p.bet = 0; if (p.bank <= 0) { p.isEliminated = true; p.statusMsg = "Bankrupt Out"; }
+            });
+            if (!tableState.players.some(p => !p.isEliminated)) { document.getElementById('table-alert').innerText = "All seats Bankrupt! Reset table console to play again."; tableState.bettingPhaseActive = false; refreshTableUI(false); return; }
+            tableState.bettingPhaseActive = true; tableState.activePodIndex = tableState.players.findIndex(p => !p.isEliminated);
+            document.getElementById('table-alert').innerText = "Payouts settled. Set wagers for next round!"; refreshTableUI(false);
+        }
+        window.addEventListener('keydown', function(event) {
+            if (document.activeElement.tagName === 'INPUT') return; const structuredKey = event.key.toLowerCase();
+            if (structuredKey === ' ') { event.preventDefault(); if (tableState.bettingPhaseActive) commitRoundOpening(); }
+            else if (structuredKey === 'f') { if (tableState.roundExecutionActive) triggerHitAction(); }
+            else if (structuredKey === 'j') { if (tableState.roundExecutionActive) triggerStandAction(); }
+            else if (structuredKey === '1') { if (tableState.bettingPhaseActive) appendStake(10); }
+            else if (structuredKey === '2') { if (tableState.bettingPhaseActive) appendStake(25); }
+            else if (structuredKey === '3') { if (tableState.bettingPhaseActive) appendStake(100); }
+            else if (structuredKey === '0') { if (tableState.bettingPhaseActive) processAllInStake(); }
+            else if (event.key === 'Delete' || event.key === 'Backspace') { if (tableState.bettingPhaseActive) purgeActiveStake(); }
+        });
+        wipeTableReset();
+    </script>
+</body>
+</html>
