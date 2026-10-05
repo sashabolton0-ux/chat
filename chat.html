@@ -413,7 +413,7 @@ async function runServerCompliance() {
     }
 
     if (settings?.maintenance_mode) {
-      showLockout("Chat is temporarily unavailable, but maybe make sure you are on the right one, your version number is: 6.1", settings.maintenance_reason || "Down for updates, no need to download the new version, because you are on the right one.", settings.download_url || "");
+      showLockout("Chat is temporarily unavailable.", settings.maintenance_reason || "Down for updates.", settings.download_url || "");
       return false;
     }
 
