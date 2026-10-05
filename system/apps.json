@@ -13,9 +13,9 @@
       "file": "apps/games.html"
     },
     {
-      "name": "optimized - Games",
+      "name": "Optimized - Games",
       "icon": "🎮",
-      "description": "A lower intensity version of Games with less features",
+      "description": "A lower intensity version of games with less features (less lag)",
       "file": "apps/games_low.html"
     }
   ]
