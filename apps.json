@@ -1,0 +1,10 @@
+{
+  "apps": [
+    {
+      "name": "Chat",
+      "icon": "\ud83d\udcac",
+      "description": "School chat",
+      "file": "chat.html"
+    }
+  ]
+}
