@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="color-scheme" content="light dark">
 <meta name="theme-color" content="#111318">
-<title>Home</title>
+<title>LacesOS</title>
 <link id="favicon" rel="icon" href="data:,">
 <style>
 :root{color-scheme:dark}
@@ -14,9 +14,8 @@ html,body{margin:0;width:100%;height:100%;font-family:system-ui,-apple-system,Se
 body{overflow:hidden;background:var(--bg);color:var(--text);transition:background .15s,color .15s}
 button,input,select{font:inherit}
 #main{width:100%;height:100%;display:flex;flex-direction:column;min-width:0}
-#top{height:68px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;padding:0 28px;font-weight:700;font-size:20px;flex-shrink:0}
-#topRight{display:flex;align-items:center;gap:10px}
-#settingsBtn{border:1px solid var(--border);background:var(--card);color:var(--text);padding:9px 13px;border-radius:9px;cursor:pointer}
+#top{display:none}
+#settingsBtn{position:fixed;left:18px;bottom:18px;z-index:20;border:1px solid var(--border);background:var(--card);color:var(--text);padding:10px 14px;border-radius:10px;cursor:pointer;box-shadow:0 8px 28px rgba(0,0,0,.28)}
 #settingsBtn:hover{background:var(--hover)}
 #content{flex:1;overflow:auto;padding:34px 38px;color:var(--muted)}
 #content .welcome{text-align:center;margin:0 auto 28px;max-width:900px}
@@ -49,17 +48,11 @@ button,input,select{font:inherit}
 </head>
 <body>
 <main id="main">
-  <header id="top">
-    <span id="systemName">SYSTEM</span>
-    <div id="topRight">
-      <button id="homeBtn" type="button">⌂ Home</button>
-      <button id="settingsBtn" type="button">⚙ Settings</button>
-    </div>
-  </header>
+  <button id="settingsBtn" type="button">⚙ Settings</button>
 
   <section id="content">
     <div class="welcome">
-      <h1>System</h1>
+      <h1>Home</h1>
       <div>Posts and apps.</div>
     </div>
     <div id="posts">
@@ -76,10 +69,10 @@ button,input,select{font:inherit}
 
 <div id="modalBack">
   <div id="modal" role="dialog" aria-modal="true" aria-labelledby="settingsTitle">
-    <h2 id="settingsTitle">System Settings</h2>
+    <h2 id="settingsTitle">Settings</h2>
     <div class="field">
       <label for="tabName">Tab name</label>
-      <input id="tabName" type="text" maxlength="80" placeholder="System">
+      <input id="tabName" type="text" maxlength="80" placeholder="LacesOS">
     </div>
     <div class="field">
       <label for="iconUrl">Tab icon URL</label>
@@ -118,8 +111,7 @@ function resolvedTheme(mode){return mode==="system"?(matchMedia("(prefers-color-
 function applySettings(){
   const s=getSettings(), t=themes[resolvedTheme(s.theme||"dark")];
   for(const [k,v] of Object.entries(t)) document.documentElement.style.setProperty("--"+k,v);
-  document.title=s.tabName?.trim()||"System";
-  document.getElementById("systemName").textContent=s.tabName?.trim()||"SYSTEM";
+  document.title="LacesOS";
   document.querySelector('meta[name="theme-color"]').content=t.bg;
   document.getElementById("favicon").href=s.iconUrl?.trim()||"data:,";
 }
@@ -129,14 +121,14 @@ matchMedia("(prefers-color-scheme: dark)").addEventListener?.("change",()=>{if((
 const modalBack=document.getElementById("modalBack");
 document.getElementById("settingsBtn").onclick=()=>{
   const s=getSettings();
-  tabName.value=s.tabName||"System"; iconUrl.value=s.iconUrl||""; theme.value=s.theme||"dark";
+  tabName.value=s.tabName||"LacesOS"; iconUrl.value=s.iconUrl||""; theme.value=s.theme||"dark";
   modalBack.style.display="flex"; tabName.focus();
 };
 const tabName=document.getElementById("tabName"), iconUrl=document.getElementById("iconUrl"), theme=document.getElementById("theme");
 document.getElementById("cancelSettings").onclick=()=>modalBack.style.display="none";
 modalBack.onclick=e=>{if(e.target===modalBack)modalBack.style.display="none"};
 document.getElementById("saveSettings").onclick=()=>{
-  saveSettings({tabName:tabName.value.trim()||"System",iconUrl:iconUrl.value.trim(),theme:theme.value});
+  saveSettings({tabName:tabName.value.trim()||"LacesOS",iconUrl:iconUrl.value.trim(),theme:theme.value});
   applySettings(); modalBack.style.display="none";
 };
 
