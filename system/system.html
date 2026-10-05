@@ -16,9 +16,8 @@ button,input,select{font:inherit}
 #main{width:100%;height:100%;display:flex;flex-direction:column;min-width:0}
 #top{height:68px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;padding:0 28px;font-weight:700;font-size:20px;flex-shrink:0}
 #topRight{display:flex;align-items:center;gap:10px}
-#settingsBtn,#homeBtn{border:1px solid var(--border);background:var(--card);color:var(--text);padding:9px 13px;border-radius:9px;cursor:pointer}
-#settingsBtn:hover,#homeBtn:hover{background:var(--hover)}
-#homeBtn{display:none}
+#settingsBtn{border:1px solid var(--border);background:var(--card);color:var(--text);padding:9px 13px;border-radius:9px;cursor:pointer}
+#settingsBtn:hover{background:var(--hover)}
 #content{flex:1;overflow:auto;padding:34px 38px;color:var(--muted)}
 #content .welcome{text-align:center;margin:0 auto 28px;max-width:900px}
 #content h1{color:var(--text);margin:0 0 8px;font-size:30px}
@@ -59,22 +58,19 @@ button,input,select{font:inherit}
   </header>
 
   <section id="content">
-    <div id="homeView">
-      <div class="welcome">
-        <h1>System</h1>
-        <div>Posts and apps.</div>
-      </div>
-      <div id="posts">
-        <div id="postsTitle">Posts</div>
-        <div id="postsList"></div>
-      </div>
-      <div class="welcome" style="margin-bottom:18px">
-        <h1 style="font-size:20px">Apps</h1>
-      </div>
-      <div id="apps"></div>
-      <div id="error"></div>
+    <div class="welcome">
+      <h1>System</h1>
+      <div>Posts and apps.</div>
     </div>
-    <div id="appView" style="display:none"></div>
+    <div id="posts">
+      <div id="postsTitle">Posts</div>
+      <div id="postsList"></div>
+    </div>
+    <div class="welcome" style="margin-bottom:18px">
+      <h1 style="font-size:20px">Apps</h1>
+    </div>
+    <div id="apps"></div>
+    <div id="error"></div>
   </section>
 </main>
 
@@ -144,41 +140,16 @@ document.getElementById("saveSettings").onclick=()=>{
   applySettings(); modalBack.style.display="none";
 };
 
-const homeView=document.getElementById("homeView"), appView=document.getElementById("appView"), homeBtn=document.getElementById("homeBtn");
-let currentApp=null;
-
-function showHome(push=true){
-  currentApp=null; appView.innerHTML=""; appView.style.display="none"; homeView.style.display="block";
-  homeBtn.style.display="none";
-  if(push) history.pushState({view:"home"},"","#home");
-}
-function showApp(html, app, push=true){
-  currentApp=app;
-  homeView.style.display="none"; appView.style.display="block"; appView.innerHTML=html;
-  homeBtn.style.display="inline-block";
-  if(push) history.pushState({view:"app",app:app},"","#app="+encodeURIComponent(app.name||"app"));
-  document.title=(getSettings().tabName?.trim()||"System")+" — "+(app.name||"App");
-}
-
-homeBtn.onclick=()=>showHome(true);
-
-async function openApp(app,push=true){
+async function openApp(app){
   if(!app.file)return;
   try{
     const r=await fetch(REPO+app.file+"?t="+Date.now(),{cache:"no-store"});
     if(!r.ok)throw new Error("App could not be loaded ("+r.status+").");
-    showApp(await r.text(),app,push);
+    document.open();
+    document.write(await r.text());
+    document.close();
   }catch(e){alert(e.message)}
 }
-
-window.addEventListener("popstate",e=>{
-  if(e.state?.view==="app" && e.state.app){
-    // Reload app from GitHub when navigating back/forward to an app entry.
-    openApp(e.state.app,false);
-  }else showHome(false);
-});
-
-history.replaceState({view:"home"},"","#home");
 
 async function loadPosts(){
   const list=document.getElementById("postsList");
@@ -212,7 +183,7 @@ async function loadApps(){
       b.querySelector(".icon").textContent=app.icon||"◼";
       b.querySelector(".name").textContent=app.name||"App";
       b.querySelector(".sub").textContent=app.description||"";
-      b.onclick=()=>openApp(app,true); box.appendChild(b);
+      b.onclick=()=>openApp(app); box.appendChild(b);
     }
   }catch(e){err.textContent=e.message;err.style.display="block"}
 }
