@@ -77,7 +77,7 @@ dialog{border:0;border-radius:14px;background:#1b1f27;color:#eef0f4;box-shadow:0
 .ping-mention{font-weight:800;color:#f0b44d}
 .ping-me{background:#5a461e;border-radius:4px;padding:0 3px}
 .mention-highlight{background:rgba(250,166,26,.08);border-left:3px solid #f0b44d;padding-left:9px;border-radius:4px}
-.invite-button{border:0;background:#5865f2;color:#fff;border-radius:7px;padding:7px 12px;font-weight:800;cursor:pointer;margin:0 4px}.invite-button:hover{filter:brightness(1.08)}
+.invite-button{border:0;background:#5865f2;color:#fff;border-radius:7px;padding:7px 12px;font-weight:800;cursor:pointer;margin:0 4px}
 @media(max-width:760px){.auth-layout{grid-template-columns:1fr}.login-news{min-height:auto}}
 
 /* Discord-style theme refresh */
@@ -286,8 +286,23 @@ html,body{height:100%;overflow:hidden}
       <h2>Server Settings</h2>
       <div class="admin-grid">
         <section class="panel">
+          <h3>Account limit</h3>
+          <label>Global accounts per device<input id="globalLimit" type="number" min="1" max="100"></label>
+          <button id="saveGlobalBtn" type="button" class="primary">Save limit</button>
+        </section>
+        <section class="panel">
           <h3>Device management</h3>
           <div id="deviceList" class="device-list"></div>
+        </section>
+        <section class="panel">
+          <h3>Client access</h3>
+          <div class="stack">
+            <label>Minimum client version<input id="requiredVersion" value="6"></label>
+            <label>Download URL<input id="downloadUrl" placeholder="https://example.com/Chat-V6.html"></label>
+            <label class="inline-check"><input id="maintenanceMode" type="checkbox"> Force maintenance mode</label>
+            <input id="maintenanceReason" placeholder="Maintenance message">
+            <button id="saveClientAccessBtn" type="button" class="primary">Save client access</button>
+          </div>
         </section>
         <section class="panel">
           <h3>Announcements</h3>
@@ -300,18 +315,6 @@ html,body{height:100%;overflow:hidden}
         </section>
       </div>
       <div class="modal-actions"><button id="closeAdminBtn" type="button" class="secondary">Close</button></div>
-    </div>
-  </dialog>
-
-  <dialog id="inviteJoinDialog">
-    <div class="modal">
-      <button class="modal-close" id="closeInviteJoinBtn" type="button">×</button>
-      <h2 id="inviteJoinTitle">Join channel</h2>
-      <p id="inviteJoinSubtitle" class="muted"></p>
-      <div class="modal-actions">
-        <button id="cancelInviteJoinBtn" type="button" class="secondary">Cancel</button>
-        <button id="confirmInviteJoinBtn" type="button" class="primary">Join channel</button>
-      </div>
     </div>
   </dialog>
 
@@ -336,11 +339,7 @@ let db = null;
 let clientBlocked = false;
 
 function makeDbClient() {
-  const username =
-    (window.state && window.state.profile && window.state.profile.username) ||
-    (window.state && window.state.user && window.state.user.username) ||
-    sessionStorage.getItem("chat_username") ||
-    "";
+  const username = sessionStorage.getItem("chat_username") || "";
   if (!CONFIG.SUPABASE_URL || !CONFIG.SUPABASE_KEY) return null;
   return window.supabase.createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_KEY, {
     global: { headers: username ? { "x-chat-username": username } : {} }
@@ -413,7 +412,7 @@ async function runServerCompliance() {
     }
 
     if (settings?.maintenance_mode) {
-      showLockout("Chat is temporarily unavailable.", settings.maintenance_reason || "Down for updates.", settings.download_url || "");
+      showLockout("Chat is temporarily unavailable, but maybe make sure you are on the right one, your version number is: 6.1", settings.maintenance_reason || "Down for updates, no need to download the new version, because you are on the right one.", settings.download_url || "");
       return false;
     }
 
@@ -450,6 +449,32 @@ window.state = {
   channels: [], messages: [], isAdmin: false,
   dmThreads: [], unread: {}, people: []
 };
+const CHAT_SESSION_KEY = "chat_app_session_v7";
+
+function readChatSession(){
+  try{
+    const raw = localStorage.getItem(CHAT_SESSION_KEY);
+    return raw ? JSON.parse(raw) : null;
+  }catch(_){ return null; }
+}
+function writeChatSession(username){
+  try{ localStorage.setItem(CHAT_SESSION_KEY, JSON.stringify({username})); }catch(_){}
+}
+function clearChatSession(){
+  try{ localStorage.removeItem(CHAT_SESSION_KEY); }catch(_){}
+}
+async function ensureLoggedIn(){
+  if(state.profile?.username) return state.profile;
+  if(!state.user?.username){
+    const saved = readChatSession();
+    if(saved?.username) state.user = {username:String(saved.username)};
+  }
+  if(!state.user?.username) throw new Error("Must be logged in.");
+  const profile = await loadProfile();
+  if(!profile) throw new Error("Must be logged in.");
+  return profile;
+}
+
 
 window.deviceId = (() => {
   const key = "chat_app_device_id_v6";
@@ -525,7 +550,7 @@ async function signUp(username, password) {
   if (error) throw error;
 
   state.user = { username: clean };
-  sessionStorage.setItem("chat_username", clean);
+  writeChatSession(clean);
   refreshDbClient();
   return data;
 }
@@ -542,7 +567,7 @@ async function signIn(username, password) {
   if (!data) throw new Error("Incorrect username or password.");
 
   state.user = { username: data.username };
-  sessionStorage.setItem("chat_username", data.username);
+  writeChatSession(data.username);
   refreshDbClient();
   return data;
 }
@@ -551,7 +576,7 @@ async function signOut() {
   if (state.realtime) await db.removeChannel(state.realtime);
   state.user = null;
   state.profile = null;
-  sessionStorage.removeItem("chat_username");
+  clearChatSession();
   location.reload();
 }
 
@@ -569,14 +594,9 @@ const roomSubtitle = document.getElementById("roomSubtitle");
 const currentUserLabel = document.getElementById("currentUserLabel");
 const adminBtn = document.getElementById("adminBtn");
 const adminDialog = document.getElementById("adminDialog");
-const inviteJoinDialog = document.getElementById("inviteJoinDialog");
-const inviteJoinTitle = document.getElementById("inviteJoinTitle");
-const inviteJoinSubtitle = document.getElementById("inviteJoinSubtitle");
-const confirmInviteJoinBtn = document.getElementById("confirmInviteJoinBtn");
-const closeInviteJoinBtn = document.getElementById("closeInviteJoinBtn");
-const cancelInviteJoinBtn = document.getElementById("cancelInviteJoinBtn");
-let pendingInviteCode = null;
 const deviceList = document.getElementById("deviceList");
+const globalLimit = document.getElementById("globalLimit");
+const saveGlobalBtn = document.getElementById("saveGlobalBtn");
 const newsForm = document.getElementById("newsForm");
 const newsTitle = document.getElementById("newsTitle");
 const newsSummary = document.getElementById("newsSummary");
@@ -585,6 +605,7 @@ const requiredVersion = document.getElementById("requiredVersion");
 const downloadUrl = document.getElementById("downloadUrl");
 const maintenanceMode = document.getElementById("maintenanceMode");
 const maintenanceReason = document.getElementById("maintenanceReason");
+const saveClientAccessBtn = document.getElementById("saveClientAccessBtn");
 const logoutBtn = document.getElementById("logoutBtn");
 const refreshBtn = document.getElementById("refreshBtn");
 const profileBtn = document.getElementById("profileBtn");
@@ -778,10 +799,15 @@ async function saveProfile(){
   await loadMessages();
   toast("Profile saved.");
 }
-async function openAdmin(){if(!state.isAdmin)return;await loadDevices();adminDialog.showModal()}
+async function openAdmin(){if(!state.isAdmin)return;const {data:settings,error}=await db.from("server_settings").select("id,admins,maintenance_mode,maintenance_reason,min_required_version,download_url,global_max_accounts_per_device").limit(1).single();if(error)throw error;globalLimit.value=settings.global_max_accounts_per_device;requiredVersion.value=settings.min_required_version||"6";downloadUrl.value=settings.download_url||"";maintenanceMode.checked=!!settings.maintenance_mode;maintenanceReason.value=settings.maintenance_reason||"Down for updates.";await loadDevices();adminDialog.showModal()}
 async function loadDevices(){const {data,error}=await db.rpc("admin_list_devices");if(error)throw error;deviceList.innerHTML=(data||[]).map(d=>`<div class="device-row"><div><strong>${escapeHtml(d.device_id)}</strong><div class="small muted">${escapeHtml(d.profile_usernames||"No profiles")} · ${d.account_count} account(s)</div></div><div class="device-actions"><input class="device-limit" data-device="${escapeHtml(d.device_id)}" type="number" min="0" max="100" value="${d.custom_account_limit??""}" placeholder="global"><button type="button" class="secondary device-limit-btn" data-device="${escapeHtml(d.device_id)}">Set</button><button type="button" class="${d.is_banned?"primary":"danger"} device-ban-btn" data-device="${escapeHtml(d.device_id)}">${d.is_banned?"Unban":"Ban"}</button></div></div>`).join("")||'<div class="empty">No devices.</div>';document.querySelectorAll(".device-limit-btn").forEach(btn=>btn.onclick=async()=>{const input=document.querySelector(`.device-limit[data-device="${CSS.escape(btn.dataset.device)}"]`);const value=input.value===""?null:Number(input.value);try{const {error}=await db.rpc("admin_set_device_limit",{p_device_id:btn.dataset.device,p_custom_limit:value});if(error)throw error;toast("Device limit saved.")}catch(e){toast(e.message,true)}});document.querySelectorAll(".device-ban-btn").forEach(btn=>btn.onclick=async()=>{const ban=btn.textContent.trim()!=="Unban";try{const {error}=await db.rpc("admin_set_device_ban",{p_device_id:btn.dataset.device,p_is_banned:ban,p_ban_reason:ban?"Banned by administrator":null});if(error)throw error;await loadDevices();toast(ban?"Device banned.":"Device unbanned.")}catch(e){toast(e.message,true)}})}
-async function startApp(){await loadProfile();if(!state.profile){document.getElementById("appView").classList.add("hidden");document.getElementById("authView").classList.remove("hidden");return}if(state.profile.is_banned)throw new Error(state.profile.ban_reason||"Your account is banned.");const {data:admin,error:adminError}=await db.rpc("is_admin",{p_username:state.profile.username});if(adminError)throw adminError;state.isAdmin=!!admin;document.getElementById("authView").classList.add("hidden");document.getElementById("appView").classList.remove("hidden");currentUserLabel.textContent="@"+state.profile.username;adminBtn.classList.toggle("hidden",!state.isAdmin);await heartbeat();await loadChannels();try{await loadDMThreads()}catch(e){console.error(e)}try{await loadPeople()}catch(e){console.error(e)}try{await subscribeBackgroundMessages()}catch(e){console.error(e)}clearInterval(window.__presenceTimer);window.__presenceTimer=setInterval(async()=>{await heartbeat();await loadPeople();await loadDMThreads()},15000);clearInterval(window.__complianceTimer);window.__complianceTimer=setInterval(async()=>{await runServerCompliance()},60000)}
-document.addEventListener("DOMContentLoaded",async()=>{setupAuth();installComposer();await loadLoginNews();if(!(await runServerCompliance()))return;logoutBtn.onclick=signOut;refreshBtn.onclick=safeManualRefresh;profileBtn.onclick=openProfile;saveProfileBtn.onclick=async e=>{e.preventDefault();try{await saveProfile()}catch(err){toast(err.message,true)}};adminBtn.onclick=async()=>{try{await openAdmin()}catch(e){toast(e.message,true)}};newDmBtn.onclick=openNewDM;closeDmBtn.onclick=()=>document.getElementById("dmDialog").close();closeCommandBtn.onclick=()=>document.getElementById("commandDialog").close();closeAdminBtn.onclick=()=>adminDialog.close();closeInviteJoinBtn.onclick=()=>{pendingInviteCode=null;inviteJoinDialog.close()};cancelInviteJoinBtn.onclick=()=>{pendingInviteCode=null;inviteJoinDialog.close()};confirmInviteJoinBtn.onclick=async()=>{if(pendingInviteCode)await acceptInvite(pendingInviteCode)};newsForm.onsubmit=async e=>{e.preventDefault();try{const {error}=await db.rpc("admin_create_news",{p_title:newsTitle.value.trim(),p_summary:newsSummary.value.trim(),p_url:newsUrl.value.trim()||null});if(error)throw error;newsForm.reset();await loadLoginNews();toast("Update posted.")}catch(e){toast(e.message,true)}};/* Deliberately do not restore a previous login on page load. Each page load starts at the login screen. */});
+async function startApp(){
+  if(!state.user?.username){
+    const saved=readChatSession();
+    if(saved?.username) state.user={username:String(saved.username)};
+  }
+  await loadProfile();if(!state.profile){document.getElementById("appView").classList.add("hidden");document.getElementById("authView").classList.remove("hidden");return}if(state.profile.is_banned)throw new Error(state.profile.ban_reason||"Your account is banned.");const {data:admin,error:adminError}=await db.rpc("is_admin",{p_username:state.profile.username});if(adminError)throw adminError;state.isAdmin=!!admin;document.getElementById("authView").classList.add("hidden");document.getElementById("appView").classList.remove("hidden");currentUserLabel.textContent="@"+state.profile.username;adminBtn.classList.toggle("hidden",!state.isAdmin);await heartbeat();await loadChannels();try{await loadDMThreads()}catch(e){console.error(e)}try{await loadPeople()}catch(e){console.error(e)}try{await subscribeBackgroundMessages()}catch(e){console.error(e)}clearInterval(window.__presenceTimer);window.__presenceTimer=setInterval(async()=>{await heartbeat();await loadPeople();await loadDMThreads()},15000);clearInterval(window.__complianceTimer);window.__complianceTimer=setInterval(async()=>{await runServerCompliance()},60000)}
+document.addEventListener("DOMContentLoaded",async()=>{setupAuth();installComposer();await loadLoginNews();if(!(await runServerCompliance()))return;logoutBtn.onclick=signOut;refreshBtn.onclick=safeManualRefresh;profileBtn.onclick=openProfile;saveProfileBtn.onclick=async e=>{e.preventDefault();try{await saveProfile()}catch(err){toast(err.message,true)}};adminBtn.onclick=async()=>{try{await openAdmin()}catch(e){toast(e.message,true)}};newDmBtn.onclick=openNewDM;saveClientAccessBtn.onclick=async()=>{try{const version=(requiredVersion.value||"6").trim();const url=(downloadUrl.value||"").trim()||null;const reason=(maintenanceReason.value||"Down for updates.").trim();const {error}=await db.rpc("admin_set_client_access",{p_min_version:version,p_download_url:url,p_maintenance_mode:maintenanceMode.checked,p_maintenance_reason:reason});if(error)throw error;toast("Client access settings saved.")}catch(e){toast(e.message,true)}};closeDmBtn.onclick=()=>document.getElementById("dmDialog").close();closeCommandBtn.onclick=()=>document.getElementById("commandDialog").close();closeAdminBtn.onclick=()=>adminDialog.close();saveGlobalBtn.onclick=async()=>{const value=Number(globalLimit.value);if(!Number.isInteger(value)||value<1||value>100)return toast("Enter a limit from 1 to 100.",true);try{const {error}=await db.rpc("admin_set_global_limit",{p_limit:value});if(error)throw error;toast("Global account limit saved.")}catch(e){toast(e.message,true)}};newsForm.onsubmit=async e=>{e.preventDefault();try{const {error}=await db.rpc("admin_create_news",{p_title:newsTitle.value.trim(),p_summary:newsSummary.value.trim(),p_url:newsUrl.value.trim()||null});if(error)throw error;newsForm.reset();await loadLoginNews();toast("Update posted.")}catch(e){toast(e.message,true)}};/* Deliberately do not restore a previous login on page load. Each page load starts at the login screen. */});
 let __lastManualRefresh = 0;
 let __refreshBusy = false;
 const REFRESH_COOLDOWN_MS = 15000;
@@ -827,6 +853,7 @@ async function showUserPicker(title, subtitle, users, actionLabel, action) {
 }
 
 async function adminUserCommand(command, username) {
+  await ensureLoggedIn();
   if (!state.isAdmin) throw new Error("Only administrators can use that command.");
   const normalized=String(username||"").trim();
   if (!normalized) {
@@ -935,11 +962,21 @@ async function enableNotifications() {
 if (notificationBtn) notificationBtn.onclick = enableNotifications;
 
 function renderMarkup(text,currentUsername){let s=escapeHtml(text);s=s.replace(/`([^`\n]+)`/g,"<code>$1</code>");s=s.replace(/\*\*([^*\n]+)\*\*/g,"<strong>$1</strong>");s=s.replace(/__([^_\n]+)__/g,"<u>$1</u>");s=s.replace(/~~([^~\n]+)~~/g,"<s>$1</s>");s=s.replace(/\*([^*\n]+)\*/g,"<em>$1</em>");s=s.replace(/^&gt;\s?(.*)$/gm,"<blockquote>$1</blockquote>");s=s.replace(/(^|[\s>])(@[A-Za-z0-9_]+)/g,(m,pre,mention)=>`${pre}<span class="${currentUsername&&mention.slice(1).toLowerCase()===currentUsername.toLowerCase()?"ping-mention ping-me":"ping-mention"}">${mention}</span>`);s=s.replace(/(^|[\s>])(https?:\/\/[^\s<]+)/g,'$1<a href="$2" target="_blank" rel="noopener noreferrer">$2</a>');return s.replace(/\n/g,"<br>")}
-async function loadMessages(){if(!state.channel)return;const room=state.channel.is_dm?dmRoom(state.channel.dm_username):"channel:"+state.channel.id;const {data,error}=await db.from("messages").select("id,sender_username,message_text,created_at,recipient_username,is_dm,channel_id,room_id").eq("room_id",room).order("created_at",{ascending:true}).limit(100);if(error)throw error;state.messages=data||[];await renderMessages()}
-async function renderMessages(){const box=document.getElementById("messages");if(!state.messages.length){box.innerHTML='<div class="empty">No messages yet. Start the conversation.</div>';return}const names=[...new Set(state.messages.map(m=>m.sender_username))];const {data:profiles}=await db.from("profiles").select("username,username_color,profile_tag").in("username",names);const map=Object.fromEntries((profiles||[]).map(p=>[p.username,p]));const codes=[...new Set(state.messages.flatMap(m=>{const x=m.message_text.match(/invite\/([A-Za-z0-9_-]+)/);return x?[x[1]]:[]}))];let validInvites={};if(codes.length){const {data:channels,error}=await db.from("channels").select("id,name,invite_code,is_private").in("invite_code",codes).eq("is_private",true);if(!error)validInvites=Object.fromEntries((channels||[]).map(c=>[c.invite_code,c]))}let previousSender=null,previousTime=0;box.innerHTML=state.messages.map(m=>{const p=map[m.sender_username]||{};const color=safeColor(p.username_color);const tag=p.profile_tag?`<span class="profile-tag">${escapeHtml(p.profile_tag)}</span>`:"";const time=new Date(m.created_at);const continued=previousSender===m.sender_username&&(time.getTime()-previousTime)<600000;const pingMe=new RegExp("@"+String(state.profile.username).replace(/[.*+?^${}()|[\]\\]/g,"\\$&")+"\b","i").test(m.message_text);const invite=m.message_text.match(/invite\/([A-Za-z0-9_-]+)/);previousSender=m.sender_username;previousTime=time.getTime();let content;if(invite&&validInvites[invite[1]]){const pos=m.message_text.indexOf(invite[0]);const channel=validInvites[invite[1]];content=`${renderMarkup(m.message_text.slice(0,pos),state.profile.username)}<button type="button" class="invite-button" data-invite="${escapeHtml(invite[1])}">Join #${escapeHtml(channel.name)}</button>${renderMarkup(m.message_text.slice(pos+invite[0].length),state.profile.username)}`}else content=renderMarkup(m.message_text,state.profile.username);return `<article class="message ${continued?"message-continued":""} ${pingMe?"mention-highlight":""}">${continued?"":`<div class="message-meta"><span class="message-username" style="color:${color}">${escapeHtml(m.sender_username)}</span>${tag}<time>${time.toLocaleTimeString([], {hour:"2-digit",minute:"2-digit"})}</time></div>`}<div class="message-content">${content}</div></article>`}).join("");box.querySelectorAll("[data-invite]").forEach(btn=>btn.onclick=()=>openInviteJoin(btn.dataset.invite));box.scrollTop=box.scrollHeight}
-async function openInviteJoin(code){const {data:channel,error}=await db.from("channels").select("id,name,invite_code,is_private").eq("invite_code",code).eq("is_private",true).limit(1).maybeSingle();if(error||!channel)return;pendingInviteCode=code;inviteJoinTitle.textContent=`Join #${channel.name}?`;inviteJoinSubtitle.textContent="You've been invited to join this private channel. Joining will add you to the channel.";inviteJoinDialog.showModal()}
-async function acceptInvite(code){try{const {data,error}=await db.rpc("accept_channel_invite",{p_invite_code:code});if(error)throw error;inviteJoinDialog.close();pendingInviteCode=null;await loadChannels();const fresh=state.channels.find(c=>c.id===data);if(fresh)await selectChannel(fresh);toast("Joined #"+((fresh&&fresh.name)||"channel"));}catch(e){toast(e.message||String(e),true)}}
-function installComposer(){messageForm.onsubmit=async e=>{e.preventDefault();const raw=messageInput.value;const text=raw.trim();if(!text)return;const parts=text.split(/\s+/);const cmd=(parts[0]||"").toLowerCase();const arg=parts.slice(1).join(" ").trim();try{if(cmd==="/ban"||cmd==="/unban"){if(!state.isAdmin)throw new Error("Only administrators can use that command.");messageInput.value="";await adminUserCommand(cmd.slice(1),arg);messageInput.focus();return}if(cmd==="/invite"){messageInput.value="";await showInvitePicker();messageInput.focus();return}await sendMessage(raw.trimEnd());messageInput.value="";messageInput.focus()}catch(err){toast(err?.message||String(err),true)}};messageInput.addEventListener("keydown",e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();messageForm.requestSubmit()}})}
+async function loadMessages(){if(!state.channel)return;const room=state.channel.is_dm?dmRoom(state.channel.dm_username):"channel:"+state.channel.id;const {data,error}=await db.from("messages").select("id,sender_username,message_text,created_at,recipient_username,is_dm,channel_id,room_id").eq("room_id",room).order("created_at",{ascending:true}).limit(100);if(error)throw error;state.messages=data||[];renderMessages()}
+async function sendMessage(text){if(!state.profile||state.profile.is_banned)throw new Error("Your account is unavailable.");if(!state.channel)return;const isDM=!!state.channel.is_dm;const room=isDM?dmRoom(state.channel.dm_username):"channel:"+state.channel.id;const {error}=await db.from("messages").insert({sender_username:state.profile.username,recipient_username:isDM?state.channel.dm_username:null,channel_id:isDM?null:state.channel.id,message_text:text,is_dm:isDM,room_id:room});if(error)throw error}
+window.sendMessage = sendMessage;
+async function renderMessages(){const box=document.getElementById("messages");if(!state.messages.length){box.innerHTML='<div class="empty">No messages yet. Start the conversation.</div>';return}const names=[...new Set(state.messages.map(m=>m.sender_username))];const {data:profiles}=await db.from("profiles").select("username,username_color,profile_tag").in("username",names);const map=Object.fromEntries((profiles||[]).map(p=>[p.username,p]));let previousSender=null,previousTime=0;box.innerHTML=state.messages.map(m=>{const p=map[m.sender_username]||{};const color=safeColor(p.username_color);const tag=p.profile_tag?`<span class="profile-tag">${escapeHtml(p.profile_tag)}</span>`:"";const time=new Date(m.created_at);const continued=previousSender===m.sender_username&&(time.getTime()-previousTime)<600000;const pingMe=new RegExp("@"+String(state.profile.username).replace(/[.*+?^${}()|[\]\\]/g,"\\$&")+"\\b","i").test(m.message_text);const invite=m.message_text.match(/invite\/([A-Za-z0-9_-]+)/);previousSender=m.sender_username;previousTime=time.getTime();let content;if(invite){const pos=m.message_text.indexOf(invite[0]);content=`${renderMarkup(m.message_text.slice(0,pos),state.profile.username)}<button type="button" class="invite-button" data-invite="${escapeHtml(invite[1])}">Join channel</button>${renderMarkup(m.message_text.slice(pos+invite[0].length),state.profile.username)}`}else content=renderMarkup(m.message_text,state.profile.username);return `<article class="message ${continued?"message-continued":""} ${pingMe?"mention-highlight":""}">${continued?"":`<div class="message-meta"><span class="message-username" style="color:${color}">${escapeHtml(m.sender_username)}</span>${tag}<time>${time.toLocaleTimeString([], {hour:"2-digit",minute:"2-digit"})}</time></div>`}<div class="message-content">${content}</div></article>`}).join("");box.querySelectorAll("[data-invite]").forEach(btn=>btn.onclick=()=>acceptInvite(btn.dataset.invite));box.scrollTop=box.scrollHeight}
+async function acceptInvite(code){
+  try{
+    const {data,error}=await db.rpc("accept_channel_invite",{p_invite_code:code});
+    if(error)throw error;
+    await loadChannels();
+    const fresh=state.channels.find(c=>c.id===data);
+    if(fresh) await selectChannel(fresh);
+    toast("Joined #"+((fresh&&fresh.name)||"channel"));
+  }catch(e){toast(e.message||String(e),true)}
+}
+function installComposer(){messageForm.onsubmit=async e=>{e.preventDefault();const raw=messageInput.value;const text=raw.trim();if(!text)return;const parts=text.split(/\s+/);const cmd=(parts[0]||"").toLowerCase();const arg=parts.slice(1).join(" ").trim();try{await ensureLoggedIn();if(cmd==="/ban"||cmd==="/unban"){if(!state.isAdmin)throw new Error("Only administrators can use that command.");messageInput.value="";await adminUserCommand(cmd.slice(1),arg);messageInput.focus();return}if(cmd==="/invite"){messageInput.value="";await showInvitePicker();messageInput.focus();return}await sendMessage(raw.trimEnd());messageInput.value="";messageInput.focus()}catch(err){toast(err?.message||String(err),true)}};messageInput.addEventListener("keydown",e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();messageForm.requestSubmit()}})}
 
 async function subscribeToChannel(channel){
   if(state.realtime)await db.removeChannel(state.realtime);
