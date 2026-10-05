@@ -2,9 +2,15 @@
   "apps": [
     {
       "name": "Chat",
-      "icon": "\ud83d\udcac",
+      "icon": "💬",
       "description": "School chat",
       "file": "chat.html"
+    },
+    {
+      "name": "Games",
+      "icon": "🎮",
+      "description": "Games",
+      "file": "apps/games.html"
     }
   ]
 }
