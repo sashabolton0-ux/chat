@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>System</title>
+<style>
+*{box-sizing:border-box}
+html,body{margin:0;width:100%;height:100%;font-family:system-ui,-apple-system,Segoe UI,sans-serif;background:#111318;color:#fff}
+body{display:flex;overflow:hidden}
+#sidebar{width:240px;background:#181b22;border-right:1px solid #2b2f38;padding:18px;overflow:auto}
+#brand{font-size:20px;font-weight:700;margin-bottom:22px}
+.section{font-size:11px;text-transform:uppercase;color:#8d94a3;letter-spacing:.08em;margin:16px 8px 8px}
+.app{display:flex;align-items:center;gap:12px;width:100%;border:0;background:transparent;color:#ddd;text-align:left;padding:11px 10px;border-radius:9px;cursor:pointer}
+.app:hover{background:#272c35;color:#fff}
+.icon{width:30px;text-align:center;font-size:21px}
+.name{font-weight:600}
+.sub{font-size:12px;color:#8d94a3;margin-top:2px}
+#main{flex:1;display:flex;flex-direction:column;min-width:0}
+#top{height:56px;border-bottom:1px solid #2b2f38;display:flex;align-items:center;padding:0 20px;font-weight:700}
+#content{flex:1;display:grid;place-items:center;color:#9da4b2}
+#content .welcome{text-align:center}
+#content h1{color:#fff;margin:0 0 8px}
+</style>
+</head>
+<body>
+<aside id="sidebar">
+  <div id="brand">SYSTEM</div>
+  <div class="section">Apps</div>
+  <div id="apps"></div>
+</aside>
+<main id="main">
+  <header id="top">Home</header>
+  <section id="content">
+    <div class="welcome">
+      <h1>Welcome</h1>
+      <div>Select an app to begin.</div>
+    </div>
+  </section>
+</main>
+<script>
+const REPO="https://raw.githubusercontent.com/sashabolton0-ux/chat/main/";
+const APPS_URL=REPO+"system/apps.json";
+
+async function loadApps(){
+  const r=await fetch(APPS_URL+"?t="+Date.now(),{cache:"no-store"});
+  if(!r.ok) throw new Error("apps.json could not be loaded ("+r.status+").");
+  const data=await r.json();
+  const box=document.getElementById("apps");
+  box.innerHTML="";
+  for(const app of (data.apps||[])){
+    const b=document.createElement("button");
+    b.className="app";
+    b.innerHTML=`<span class="icon">${app.icon||"◼"}</span><span><div class="name"></div><div class="sub"></div></span>`;
+    b.querySelector(".name").textContent=app.name||"App";
+    b.querySelector(".sub").textContent=app.description||"";
+    b.onclick=()=>openApp(app);
+    box.appendChild(b);
+  }
+}
+
+async function openApp(app){
+  if(!app.file) return;
+  const url=REPO+app.file;
+  const r=await fetch(url+"?t="+Date.now(),{cache:"no-store"});
+  if(!r.ok) return alert("App could not be loaded ("+r.status+").");
+  const html=await r.text();
+  document.open(); document.write(html); document.close();
+}
+
+loadApps().catch(e=>{
+  document.getElementById("apps").innerHTML="<div style='padding:8px;color:#ff8f8f'>"+e.message+"</div>";
+});
+</script>
+</body>
+</html>
