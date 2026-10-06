@@ -7,7 +7,6 @@
 <meta name="theme-color" content="#111318">
 <title>LacesOS</title>
 <link id="favicon" rel="icon" href="data:,">
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
 <style>
 :root{color-scheme:dark}
@@ -51,6 +50,22 @@ button,input,select{font:inherit}
 .note{font-size:12px;color:var(--muted);margin-top:6px}
 .name-subtitle{color:var(--muted);line-height:1.5;margin:0 0 18px}
 .name-note{font-size:12px;color:var(--muted);margin-top:7px}
+
+#status{margin-top:26px}
+#statusTitle{font-size:20px;font-weight:700;margin-bottom:12px}
+.status-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px}
+.status-card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:16px}
+.status-label{font-size:12px;color:var(--muted);margin-bottom:7px}
+.status-value{font-size:24px;font-weight:800;color:var(--text)}
+.status-sub{font-size:12px;color:var(--muted);margin-top:5px}
+.status-list{margin-top:12px;background:var(--card);border:1px solid var(--border);border-radius:12px;overflow:hidden}
+.status-list-title{padding:13px 15px;font-weight:700;border-bottom:1px solid var(--border)}
+.status-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 15px;border-bottom:1px solid var(--border)}
+.status-row:last-child{border-bottom:0}
+.status-row-name{font-weight:600}
+.status-row-count{color:var(--muted);font-size:13px;white-space:nowrap}
+.status-refresh{margin-top:12px;border:1px solid var(--border);border-radius:9px;padding:9px 13px;background:var(--card);color:var(--text);cursor:pointer}
+.status-error{margin-top:12px;color:#ffb5b5;font-size:13px}
 </style>
 </head>
 
@@ -69,7 +84,6 @@ button,input,select{font:inherit}
   <section id="content">
     <div class="welcome">
       <h1>Home</h1>
-      <div>Settings</div>
     </div>
 
     <div id="posts">
@@ -82,6 +96,23 @@ button,input,select{font:inherit}
     </div>
 
     <div id="apps"></div>
+
+    <section id="status">
+      <div id="statusTitle">Status</div>
+      <div id="statusGrid" class="status-grid">
+        <div class="status-card"><div class="status-label">Unique devices</div><div class="status-value" id="statDevices">—</div><div class="status-sub">Devices seen</div></div>
+        <div class="status-card"><div class="status-label">Unique logins today</div><div class="status-value" id="statToday">—</div><div class="status-sub">Different devices today</div></div>
+        <div class="status-card"><div class="status-label">Total login days</div><div class="status-value" id="statLoginDays">—</div><div class="status-sub">Device login days</div></div>
+        <div class="status-card"><div class="status-label">Total app opens</div><div class="status-value" id="statOpens">—</div><div class="status-sub">Across all apps</div></div>
+        <div class="status-card"><div class="status-label">Active now</div><div class="status-value" id="statActive">—</div><div class="status-sub">Seen in the last 15 minutes</div></div>
+      </div>
+      <div class="status-list">
+        <div class="status-list-title">Most opened apps</div>
+        <div id="mostOpened"><div class="status-row"><span class="status-row-name">Loading…</span></div></div>
+      </div>
+      <div id="statusError" class="status-error" style="display:none"></div>
+    </section>
+
     <div id="error"></div>
   </section>
 </main>
@@ -146,13 +177,40 @@ const SUPABASE_URL =
 const SUPABASE_PUBLISHABLE_KEY =
   "sb_publishable_92ZS9KlK1WVR9Vr0fCYAHA_vkZ9jRTc";
 
-const supabase = window.supabase.createClient(
-  SUPABASE_URL,
-  SUPABASE_PUBLISHABLE_KEY,
-  {
-    auth:{persistSession:false,autoRefreshToken:false,detectSessionInUrl:false}
+async function supabaseRequest(path, options={}){
+  const controller=new AbortController();
+  const timer=setTimeout(()=>controller.abort(),8000);
+
+  try{
+    const headers={
+      apikey:SUPABASE_PUBLISHABLE_KEY,
+      Authorization:"Bearer "+SUPABASE_PUBLISHABLE_KEY,
+      ...(options.headers||{})
+    };
+
+    const response=await fetch(SUPABASE_URL+path,{
+      ...options,
+      headers,
+      signal:controller.signal,
+      cache:"no-store"
+    });
+
+    const text=await response.text();
+    let data=null;
+    try{ data=text ? JSON.parse(text) : null; }catch{}
+
+    if(!response.ok){
+      throw new Error(data?.message || data?.hint || text || ("Supabase request failed ("+response.status+")"));
+    }
+
+    return data;
+  }catch(error){
+    if(error.name==="AbortError") throw new Error("Supabase request timed out.");
+    throw error;
+  }finally{
+    clearTimeout(timer);
   }
-);
+}
 
 const REPO =
   "https://raw.githubusercontent.com/sashabolton0-ux/chat/main/";
@@ -231,12 +289,14 @@ function getDeviceId(){
 
 async function registerDevice(username){
   try{
-    const {error}=await supabase.rpc("register_device",{
-      p_device_id:getDeviceId(),
-      p_username:username
+    await supabaseRequest("/rest/v1/rpc/register_device",{
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({
+        p_device_id:getDeviceId(),
+        p_username:username
+      })
     });
-
-    if(error) throw error;
   }catch(error){
     console.warn("Device registration failed:",error);
   }
@@ -244,13 +304,15 @@ async function registerDevice(username){
 
 async function recordAppOpen(appId,username){
   try{
-    const {error}=await supabase.rpc("record_app_open",{
-      p_device_id:getDeviceId(),
-      p_username:username || localStorage.getItem(USERNAME_KEY) || "",
-      p_app_id:String(appId || "")
+    await supabaseRequest("/rest/v1/rpc/record_app_open",{
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({
+        p_device_id:getDeviceId(),
+        p_username:username || localStorage.getItem(USERNAME_KEY) || "",
+        p_app_id:String(appId || "")
+      })
     });
-
-    if(error) console.warn("App analytics failed:",error);
   }catch(error){
     console.warn("App analytics failed:",error);
   }
@@ -423,12 +485,9 @@ async function loadPosts(){
   const list=document.getElementById("postsList");
 
   try{
-    const {data:posts,error}=await supabase
-      .from("posts")
-      .select("id,title,date,body")
-      .order("date",{ascending:false});
-
-    if(error) throw error;
+    const posts=await supabaseRequest(
+      "/rest/v1/posts?select=id,title,date,body&order=date.desc"
+    );
 
     if(!posts.length){
       list.innerHTML='<div class="emptyPosts">No posts yet.</div>';
@@ -467,12 +526,9 @@ async function loadApps(){
   const err=document.getElementById("error");
 
   try{
-    const {data:apps,error}=await supabase
-      .from("apps")
-      .select("id,name,description,icon,file,status,warning")
-      .order("sort_order",{ascending:true});
-
-    if(error) throw error;
+    const apps=await supabaseRequest(
+      "/rest/v1/apps?select=id,name,description,icon,file,status,warning&order=sort_order.asc"
+    );
 
     box.innerHTML="";
 
@@ -514,15 +570,74 @@ async function loadApps(){
   }
 }
 
+
+function formatNumber(value){
+  return Number(value||0).toLocaleString();
+}
+
+async function loadStatus(){
+  const errorBox=document.getElementById("statusError");
+  errorBox.style.display="none";
+
+  try{
+    const data=await supabaseRequest("/rest/v1/rpc/get_public_status",{
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body:"{}"
+    });
+
+    const stats=data?.stats || {};
+    const apps=Array.isArray(data?.most_opened_apps) ? data.most_opened_apps : [];
+
+    document.getElementById("statDevices").textContent=formatNumber(stats.unique_devices);
+    document.getElementById("statToday").textContent=formatNumber(stats.unique_logins_today);
+    document.getElementById("statLoginDays").textContent=formatNumber(stats.total_login_days);
+    document.getElementById("statOpens").textContent=formatNumber(stats.total_app_opens);
+    document.getElementById("statActive").textContent=formatNumber(stats.active_devices);
+
+    const list=document.getElementById("mostOpened");
+    if(!apps.length){
+      list.innerHTML='<div class="status-row"><span class="status-row-name">No app opens yet.</span></div>';
+    }else{
+      list.innerHTML="";
+      for(const app of apps){
+        const row=document.createElement("div");
+        row.className="status-row";
+
+        const name=document.createElement("span");
+        name.className="status-row-name";
+        name.textContent=app.name || "Unknown app";
+
+        const count=document.createElement("span");
+        count.className="status-row-count";
+        count.textContent=formatNumber(app.total_opens)+" opens";
+
+        row.append(name,count);
+        list.appendChild(row);
+      }
+    }
+  }catch(error){
+    errorBox.textContent="Status is unavailable right now.";
+    errorBox.style.display="block";
+    console.warn("Status analytics failed:",error);
+  }
+}
+
+
 async function startHome(){
   showNamePrompt();
 
-  await Promise.allSettled([
-    loadPosts(),
-    loadApps()
-  ]);
+  const loading=document.getElementById("loading");
 
-  document.getElementById("loading").style.display="none";
+  try{
+    await Promise.allSettled([
+      loadPosts(),
+      loadApps(),
+      loadStatus()
+    ]);
+  }finally{
+    loading.style.display="none";
+  }
 }
 
 startHome();
