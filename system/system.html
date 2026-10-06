@@ -402,8 +402,7 @@ async function openApp(app){
   recordAppOpen(app.id || app.name, localStorage.getItem(USERNAME_KEY) || "");
 
   // Open immediately from the user's click so the browser keeps a real
-  // about:blank tab. The app itself is then built into that document with
-  // DOM APIs instead of document.write'ing the entire fetched page.
+  // about:blank tab.
   const appWindow=window.open("about:blank","_blank");
 
   if(!appWindow){
@@ -433,9 +432,6 @@ async function openApp(app){
     const parsed=new DOMParser().parseFromString(source,"text/html");
     const targetDoc=appWindow.document;
 
-    // Build a normal HTML document without injecting the fetched source
-    // through document.write. This keeps external scripts in normal DOM
-    // loading order and avoids the fragile about:blank parser behavior.
     const root=targetDoc.documentElement;
     while(root.firstChild) root.removeChild(root.firstChild);
 
@@ -447,16 +443,53 @@ async function openApp(app){
     base.href=baseURL;
     head.appendChild(base);
 
-    // Copy metadata/styles/other head elements, but load scripts separately.
+    if(parsed.title){
+      targetDoc.title=parsed.title;
+    }
+
+    // Copy ordinary metadata and non-script head elements. GitHub-hosted
+    // CSS is fetched as text below instead of being loaded directly from
+    // raw.githubusercontent.com, which can be served as text/plain.
     for(const node of Array.from(parsed.head.childNodes)){
       if(node.nodeType!==Node.ELEMENT_NODE)continue;
-      if(node.tagName.toLowerCase()==="base" || node.tagName.toLowerCase()==="script")continue;
+      const tag=node.tagName.toLowerCase();
+      if(tag==="base" || tag==="script" || tag==="link")continue;
       head.appendChild(targetDoc.importNode(node,true));
     }
 
-    // Load external scripts in their original order before the body scripts.
-    // The Dino game has its main index.js in <head>, so this preserves its
-    // original initialization sequence.
+    // Load stylesheets as text. This makes local/GitHub CSS independent of
+    // the MIME type returned by raw GitHub hosting.
+    const links=Array.from(parsed.head.querySelectorAll('link[rel~="stylesheet"]'));
+    for(const oldLink of links){
+      const href=oldLink.getAttribute("href");
+      if(!href)continue;
+
+      const absoluteURL=new URL(href,baseURL).href;
+      const style=targetDoc.createElement("style");
+
+      if(absoluteURL.startsWith(REPO)){
+        const cssResponse=await fetch(absoluteURL+"?t="+Date.now(),{cache:"no-store"});
+        if(!cssResponse.ok){
+          throw new Error("App stylesheet could not be loaded: "+absoluteURL);
+        }
+        style.textContent=await cssResponse.text();
+      }else{
+        // Keep third-party stylesheets (such as Google Fonts) as normal links.
+        const link=targetDoc.createElement("link");
+        for(const attr of Array.from(oldLink.attributes)){
+          link.setAttribute(attr.name,attr.value);
+        }
+        link.href=absoluteURL;
+        head.appendChild(link);
+        continue;
+      }
+
+      head.appendChild(style);
+    }
+
+    // Fetch external JavaScript and inline the returned source. This is the
+    // important part: the browser never executes a raw GitHub URL as a
+    // <script src>, so strict MIME checking cannot block the Dino game.
     const headScripts=Array.from(parsed.head.querySelectorAll("script"));
     for(const oldScript of headScripts){
       const script=targetDoc.createElement("script");
@@ -464,21 +497,22 @@ async function openApp(app){
         if(attr.name!=="src") script.setAttribute(attr.name,attr.value);
       }
 
-      if(oldScript.src || oldScript.getAttribute("src")){
-        const src=oldScript.getAttribute("src");
-        script.src=new URL(src,baseURL).href;
-        await new Promise((resolve,reject)=>{
-          script.onload=resolve;
-          script.onerror=()=>reject(new Error("App script could not be loaded: "+script.src));
-          head.appendChild(script);
-        });
+      const src=oldScript.getAttribute("src");
+      if(src){
+        const absoluteURL=new URL(src,baseURL).href;
+        const jsResponse=await fetch(absoluteURL+"?t="+Date.now(),{cache:"no-store"});
+        if(!jsResponse.ok){
+          throw new Error("App script could not be loaded: "+absoluteURL);
+        }
+        script.textContent=(await jsResponse.text())+"\n//# sourceURL="+absoluteURL;
       }else{
         script.textContent=oldScript.textContent||"";
-        head.appendChild(script);
       }
+
+      head.appendChild(script);
     }
 
-    // Copy the body markup without executing its scripts during parsing.
+    // Copy body markup but hold scripts until after the body exists.
     const bodyScripts=[];
     for(const node of Array.from(parsed.body.childNodes)){
       if(node.nodeType===Node.ELEMENT_NODE && node.tagName.toLowerCase()==="script"){
@@ -488,31 +522,33 @@ async function openApp(app){
       }
     }
 
-    // Execute inline body scripts after the body exists, in source order.
+    // Execute body scripts in their original order, also by fetching and
+    // inlining external source rather than using raw GitHub script URLs.
     for(const oldScript of bodyScripts){
       const script=targetDoc.createElement("script");
       for(const attr of Array.from(oldScript.attributes)){
         if(attr.name!=="src") script.setAttribute(attr.name,attr.value);
       }
 
-      if(oldScript.src || oldScript.getAttribute("src")){
-        const src=oldScript.getAttribute("src");
-        script.src=new URL(src,baseURL).href;
-        await new Promise((resolve,reject)=>{
-          script.onload=resolve;
-          script.onerror=()=>reject(new Error("App script could not be loaded: "+script.src));
-          body.appendChild(script);
-        });
+      const src=oldScript.getAttribute("src");
+      if(src){
+        const absoluteURL=new URL(src,baseURL).href;
+        const jsResponse=await fetch(absoluteURL+"?t="+Date.now(),{cache:"no-store"});
+        if(!jsResponse.ok){
+          throw new Error("App script could not be loaded: "+absoluteURL);
+        }
+        script.textContent=(await jsResponse.text())+"\n//# sourceURL="+absoluteURL;
       }else{
         script.textContent=oldScript.textContent||"";
-        body.appendChild(script);
       }
+
+      body.appendChild(script);
     }
 
-    // The original Dino script listens for DOMContentLoaded. Because this
-    // document is assembled programmatically, fire that event after the
-    // complete app DOM and scripts are in place.
+    // The original Dino script listens for DOMContentLoaded. Fire it only
+    // after the complete DOM and all app scripts are ready.
     targetDoc.dispatchEvent(new Event("DOMContentLoaded",{bubbles:true}));
+    targetDoc.dispatchEvent(new Event("load"));
 
     appWindow.focus();
   }catch(error){
