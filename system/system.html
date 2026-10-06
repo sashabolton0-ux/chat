@@ -7,6 +7,7 @@
 <meta name="theme-color" content="#111318">
 <title>LacesOS</title>
 <link id="favicon" rel="icon" href="data:,">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
 <style>
 :root{color-scheme:dark}
@@ -139,8 +140,19 @@ button,input,select{font:inherit}
 </div>
 
 <script>
-const CONTENT_URL =
-  "https://script.google.com/macros/s/AKfycbw2BNRSCl9_9iMcxxlgx-8BFrLwkAXMpe1JS3nzgkcD7mvFuAnRrfW2e521M2cBrc6g/exec";
+const SUPABASE_URL =
+  "https://fqdesfgtsgsydkxiadax.supabase.co";
+
+const SUPABASE_PUBLISHABLE_KEY =
+  "sb_publishable_92ZS9KlK1WVR9Vr0fCYAHA_vkZ9jRTc";
+
+const supabase = window.supabase.createClient(
+  SUPABASE_URL,
+  SUPABASE_PUBLISHABLE_KEY,
+  {
+    auth:{persistSession:false,autoRefreshToken:false,detectSessionInUrl:false}
+  }
+);
 
 const REPO =
   "https://raw.githubusercontent.com/sashabolton0-ux/chat/main/";
@@ -217,69 +229,31 @@ function getDeviceId(){
   return id;
 }
 
-/*
-  JSONP is intentional here.
-  This keeps the local HTML from getting trapped in Apps Script
-  fetch/CORS redirects.
-*/
-function callContent(type, extra={}){
-  return new Promise((resolve,reject)=>{
-    const callbackName =
-      "__lacesos_cb_" +
-      Date.now() +
-      "_" +
-      Math.random().toString(36).slice(2);
-
-    const params=new URLSearchParams({
-      type,
-      callback:callbackName,
-      _:Date.now().toString()
+async function registerDevice(username){
+  try{
+    const {error}=await supabase.rpc("register_device",{
+      p_device_id:getDeviceId(),
+      p_username:username
     });
 
-    for(const [key,value] of Object.entries(extra)){
-      params.set(key,String(value));
-    }
+    if(error) throw error;
+  }catch(error){
+    console.warn("Device registration failed:",error);
+  }
+}
 
-    const script=document.createElement("script");
-    let finished=false;
+async function recordAppOpen(appId,username){
+  try{
+    const {error}=await supabase.rpc("record_app_open",{
+      p_device_id:getDeviceId(),
+      p_username:username || localStorage.getItem(USERNAME_KEY) || "",
+      p_app_id:String(appId || "")
+    });
 
-    const cleanup=()=>{
-      if(script.parentNode) script.parentNode.removeChild(script);
-      try{delete window[callbackName]}catch{}
-    };
-
-    const timer=setTimeout(()=>{
-      if(finished)return;
-      finished=true;
-      cleanup();
-      reject(new Error("Content service timed out."));
-    },12000);
-
-    window[callbackName]=(data)=>{
-      if(finished)return;
-      finished=true;
-      clearTimeout(timer);
-      cleanup();
-
-      if(!data || data.error){
-        reject(new Error(data?.message || "Content service returned an error."));
-        return;
-      }
-
-      resolve(data);
-    };
-
-    script.onerror=()=>{
-      if(finished)return;
-      finished=true;
-      clearTimeout(timer);
-      cleanup();
-      reject(new Error("Content service could not be reached."));
-    };
-
-    script.src=CONTENT_URL+"?"+params.toString();
-    document.head.appendChild(script);
-  });
+    if(error) console.warn("App analytics failed:",error);
+  }catch(error){
+    console.warn("App analytics failed:",error);
+  }
 }
 
 function showNamePrompt(){
@@ -309,18 +283,6 @@ function showNamePrompt(){
 
     registerDevice(name);
   };
-}
-
-async function registerDevice(username){
-  try{
-    await callContent("register_device",{
-      device_id:getDeviceId(),
-      username
-    });
-  }catch(error){
-    console.warn("Device registration failed:",error);
-    // The system still works if analytics is temporarily unavailable.
-  }
 }
 
 const modalBack=document.getElementById("modalBack");
@@ -375,11 +337,10 @@ async function openApp(app){
     if(!confirm(warning+"\n\nContinue?")) return;
   }
 
-  /*
-    Open the app in a real about:blank browsing context.
-    Create it immediately from the user's click, then fetch the raw
-    GitHub HTML and inject it into that blank document.
-  */
+  recordAppOpen(app.id || app.name, localStorage.getItem(USERNAME_KEY) || "");
+
+  // Open immediately from the user's click so the browser keeps the app in
+  // a real about:blank tab instead of creating a blob:null URL.
   const appWindow=window.open("about:blank","_blank");
 
   if(!appWindow){
@@ -408,8 +369,36 @@ async function openApp(app){
 
     if(appWindow.closed)return;
 
+    // The app's folder becomes the base URL. This makes relative resources
+    // such as assets/foo.png, index.css, and index.js load from GitHub while
+    // the visible app URL remains about:blank.
+    const cleanFile=String(app.file).split("?")[0].split("#")[0];
+    const slash=cleanFile.lastIndexOf("/");
+    const folder=slash>=0 ? cleanFile.slice(0,slash+1) : "";
+    const baseURL=REPO+folder;
+
+    const safeBase=baseURL
+      .replace(/&/g,"&amp;")
+      .replace(/"/g,"&quot;")
+      .replace(/</g,"&lt;")
+      .replace(/>/g,"&gt;");
+
+    let html=source;
+
+    // Remove an existing base tag so the LacesOS app path always wins.
+    html=html.replace(/<base\b[^>]*>/gi,"");
+
+    if(/<head\b[^>]*>/i.test(html)){
+      html=html.replace(
+        /<head\b([^>]*)>/i,
+        '<head$1><base href="'+safeBase+'">'
+      );
+    }else{
+      html='<head><base href="'+safeBase+'"></head>'+html;
+    }
+
     appWindow.document.open();
-    appWindow.document.write(source);
+    appWindow.document.write(html);
     appWindow.document.close();
     appWindow.focus();
   }catch(error){
@@ -428,15 +417,18 @@ async function openApp(app){
       appWindow.document.close();
     }
   }
-
 }
 
 async function loadPosts(){
   const list=document.getElementById("postsList");
 
   try{
-    const data=await callContent("posts");
-    const posts=Array.isArray(data.posts)?data.posts:[];
+    const {data:posts,error}=await supabase
+      .from("posts")
+      .select("id,title,date,body")
+      .order("date",{ascending:false});
+
+    if(error) throw error;
 
     if(!posts.length){
       list.innerHTML='<div class="emptyPosts">No posts yet.</div>';
@@ -475,10 +467,16 @@ async function loadApps(){
   const err=document.getElementById("error");
 
   try{
-    const data=await callContent("apps");
+    const {data:apps,error}=await supabase
+      .from("apps")
+      .select("id,name,description,icon,file,status,warning")
+      .order("sort_order",{ascending:true});
+
+    if(error) throw error;
+
     box.innerHTML="";
 
-    for(const app of (data.apps||[])){
+    for(const app of (apps||[])){
       const status=String(app.status||"on").trim().toLowerCase();
 
       if(status==="hidden")continue;
