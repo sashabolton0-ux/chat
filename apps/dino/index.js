@@ -310,45 +310,23 @@
          * Load and decode base 64 encoded sounds.
          */
         loadSounds: function () {
-            if (IS_IOS) return;
-
-            // Audio is optional. Never let an audio failure stop the game loop.
-            try {
-                var AudioContextClass = window.AudioContext || window.webkitAudioContext;
-                if (!AudioContextClass) return;
-
-                if (!this.audioContext) {
-                    this.audioContext = new AudioContextClass();
-                }
-
-                if (this.audioContext.state === 'suspended' && this.audioContext.resume) {
-                    this.audioContext.resume().catch(function () {});
-                }
+            if (!IS_IOS) {
+                this.audioContext = new AudioContext();
 
                 var resourceTemplate =
                     document.getElementById(this.config.RESOURCE_TEMPLATE_ID).content;
 
                 for (var sound in Runner.sounds) {
-                    var audioEl = resourceTemplate.getElementById(Runner.sounds[sound]);
-                    if (!audioEl || !audioEl.src) continue;
-
-                    var comma = audioEl.src.indexOf(',');
-                    if (comma === -1) continue;
-
-                    var soundSrc = audioEl.src.substr(comma + 1);
+                    var soundSrc =
+                        resourceTemplate.getElementById(Runner.sounds[sound]).src;
+                    soundSrc = soundSrc.substr(soundSrc.indexOf(',') + 1);
                     var buffer = decodeBase64ToArrayBuffer(soundSrc);
 
                     // Async, so no guarantee of order in array.
-                    this.audioContext.decodeAudioData(buffer).then(function (index) {
-                        return function (audioData) {
-                            this.soundFx[index] = audioData;
-                        }.bind(this);
-                    }.call(this, sound)).catch(function () {});
+                    this.audioContext.decodeAudioData(buffer, function (index, audioData) {
+                        this.soundFx[index] = audioData;
+                    }.bind(this, sound));
                 }
-            } catch (e) {
-                // Sound is not required for gameplay.
-                this.audioContext = null;
-                this.soundFx = {};
             }
         },
 
@@ -912,15 +890,11 @@
          * @param {SoundBuffer} soundBuffer
          */
         playSound: function (soundBuffer) {
-            if (soundBuffer && this.audioContext) {
-                try {
-                    var sourceNode = this.audioContext.createBufferSource();
-                    sourceNode.buffer = soundBuffer;
-                    sourceNode.connect(this.audioContext.destination);
-                    sourceNode.start(0);
-                } catch (e) {
-                    // Ignore audio errors so they cannot interrupt gameplay.
-                }
+            if (soundBuffer) {
+                var sourceNode = this.audioContext.createBufferSource();
+                sourceNode.buffer = soundBuffer;
+                sourceNode.connect(this.audioContext.destination);
+                sourceNode.start(0);
             }
         },
 
