@@ -9,34 +9,64 @@
 <link id="favicon" rel="icon" href="data:,">
 
 <style>
+@import url("https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500&display=swap");
 :root{color-scheme:dark}
 *{box-sizing:border-box}
-html,body{margin:0;width:100%;height:100%;font-family:system-ui,-apple-system,Segoe UI,sans-serif}
+html,body{margin:0;width:100%;height:100%;font-family:"Geist",Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;-webkit-font-smoothing:antialiased}
 body{overflow:hidden;background:var(--bg);color:var(--text)}
 button,input,select{font:inherit}
-#main{width:100%;height:100%;display:flex;flex-direction:column}
-#top{height:68px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;padding:0 28px;font-weight:700;font-size:20px;flex-shrink:0}
-#settingsBtn{border:1px solid var(--border);background:var(--card);color:var(--text);padding:9px 13px;border-radius:9px;cursor:pointer}
-#settingsBtn:hover{background:var(--hover)}
-#content{flex:1;overflow:auto;padding:34px 38px;color:var(--muted)}
-.welcome{text-align:center;margin:0 auto 28px;max-width:900px}
-.welcome h1{color:var(--text);margin:0 0 8px;font-size:30px}
-#apps{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:22px;max-width:1200px;margin:0 auto}
-.app{border:1px solid var(--border);background:var(--card);color:var(--text);border-radius:16px;cursor:pointer;min-height:180px;padding:22px 18px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center}
-.app:hover{background:var(--hover);border-color:var(--border2);transform:translateY(-2px)}
-.icon{font-size:46px;line-height:1;margin-bottom:16px}
-.name{font-weight:700;font-size:17px}
-.sub{font-size:13px;color:var(--muted);margin-top:6px}
-#posts{max-width:1200px;margin:0 auto 38px}
-#postsTitle{color:var(--text);font-size:20px;font-weight:750;margin:0 0 14px}
-.post{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:18px 20px;margin-bottom:12px}
-.post h3{margin:0 0 6px;color:var(--text);font-size:17px}
-.post .date{font-size:12px;color:var(--muted);margin-bottom:10px}
-.post .body{color:var(--text);line-height:1.5;white-space:pre-wrap}
-.emptyPosts{color:var(--muted);font-size:14px}
-#error{max-width:900px;margin:20px auto;padding:16px;border:1px solid #7a3d3d;background:#321b1b;color:#ffb5b5;border-radius:12px;display:none}
-#loading{position:fixed;inset:0;background:rgba(17,19,24,.86);display:flex;align-items:center;justify-content:center;z-index:100}
-.spinner{width:42px;height:42px;border:4px solid rgba(255,255,255,.18);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite}
+button{transition:background .18s,border-color .18s,transform .18s,opacity .18s}
+#main{width:100%;height:100%;display:flex;flex-direction:column;position:relative}
+#top{height:72px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;padding:0 34px;flex-shrink:0;background:color-mix(in srgb,var(--bg) 92%,transparent);backdrop-filter:blur(14px)}
+#systemName{font-size:15px;font-weight:600;letter-spacing:-.01em;display:flex;align-items:center;gap:10px}
+#systemName:before{content:"";width:7px;height:7px;border-radius:50%;background:var(--accent);box-shadow:0 0 18px color-mix(in srgb,var(--accent) 75%,transparent)}
+#settingsBtn{border:1px solid var(--border);background:transparent;color:var(--muted);padding:8px 12px;border-radius:8px;cursor:pointer;font-size:13px;font-weight:500}
+#settingsBtn:hover{background:var(--card);color:var(--text);border-color:var(--border2)}
+#content{flex:1;overflow:auto;padding:70px 34px 92px;color:var(--muted);scrollbar-width:thin}
+#content::-webkit-scrollbar{width:8px}
+#content::-webkit-scrollbar-thumb{background:var(--border2);border-radius:99px}
+.welcome{text-align:left;margin:0 auto 44px;max-width:1080px}
+.welcome h1{color:var(--text);margin:0 0 10px;font-size:42px;line-height:1;letter-spacing:-.045em;font-weight:600}
+.welcome>div{font-size:14px;color:var(--muted);letter-spacing:-.01em}
+#apps{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:10px;max-width:1080px;margin:0 auto}
+.app{border:1px solid var(--border);background:var(--card);color:var(--text);border-radius:12px;cursor:pointer;min-height:152px;padding:20px;display:flex;flex-direction:column;align-items:flex-start;justify-content:flex-end;text-align:left;position:relative;overflow:hidden}
+.app:after{content:"";position:absolute;inset:0;background:linear-gradient(135deg,color-mix(in srgb,var(--accent) 8%,transparent),transparent 42%);opacity:0;transition:opacity .2s}
+.app:hover{background:var(--hover);border-color:var(--border2);transform:translateY(-1px)}
+.app:hover:after{opacity:1}
+.icon{font-size:30px;line-height:1;margin-bottom:auto;position:relative;z-index:1}
+.name{font-weight:600;font-size:15px;letter-spacing:-.015em;position:relative;z-index:1}
+.sub{font-size:12px;color:var(--muted);margin-top:5px;line-height:1.4;position:relative;z-index:1}
+#posts{max-width:1080px;margin:0 auto 56px}
+#postsTitle,#sectionLabel,#metricsTitle{color:var(--text);font-family:"Geist",Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;font-size:13px;font-weight:600;line-height:20px;letter-spacing:-.01em;margin:0 0 12px;text-transform:none}
+.post{background:transparent;border:1px solid var(--border);border-radius:11px;padding:17px 18px;margin-bottom:8px}
+.post:hover{background:color-mix(in srgb,var(--card) 70%,transparent)}
+.post h3{margin:0 0 5px;color:var(--text);font-size:15px;font-weight:600;letter-spacing:-.015em}
+.post .date{font-family:"Geist Mono",ui-monospace,SFMono-Regular,Menlo,monospace;font-size:10px;color:var(--muted);margin-bottom:9px;text-transform:uppercase;letter-spacing:.08em}
+.post .body{color:var(--muted);line-height:1.55;font-size:13px;white-space:pre-wrap}
+.emptyPosts{color:var(--muted);font-size:13px}
+#sectionLabel{max-width:1080px;margin:0 auto 12px;scroll-margin-top:28px}
+#metrics{max-width:1080px;margin:72px auto 80px;scroll-margin-top:28px}
+.metrics-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px}
+.metric-card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:16px}
+.metric-label{font-family:"Geist Mono",ui-monospace,SFMono-Regular,Menlo,monospace;font-size:9px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted)}
+.metric-value{margin-top:10px;color:var(--text);font-size:25px;font-weight:600;letter-spacing:-.04em}
+.metric-sub{margin-top:4px;color:var(--muted);font-size:11px}
+.metric-list{margin-top:10px;background:var(--card);border:1px solid var(--border);border-radius:12px;overflow:hidden}
+.metric-list-title{padding:13px 15px;border-bottom:1px solid var(--border);color:var(--text);font-size:13px;font-weight:600}
+.metric-row{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:12px 15px;border-bottom:1px solid var(--border);font-size:12px}
+.metric-row:last-child{border-bottom:0}
+.metric-row-name{color:var(--text)}
+.metric-row-count{font-family:"Geist Mono",ui-monospace,SFMono-Regular,Menlo,monospace;color:var(--muted);font-size:10px;white-space:nowrap}
+.metric-error{margin-top:10px;color:#ffb5b5;font-size:12px}
+#footer{position:fixed;left:0;right:0;bottom:0;height:62px;display:flex;align-items:center;justify-content:center;gap:13px;padding:0 24px;border-top:1px solid var(--border);background:color-mix(in srgb,var(--bg) 88%,transparent);backdrop-filter:blur(14px);z-index:20;font-family:"Geist Mono",ui-monospace,SFMono-Regular,Menlo,monospace;font-size:10px;letter-spacing:.055em;text-transform:uppercase;color:var(--muted)}
+.footer-dot{opacity:.45}
+.footer-item{white-space:nowrap;border:0;background:transparent;color:inherit;padding:8px 2px;cursor:pointer;font:inherit;letter-spacing:inherit;text-transform:inherit}
+.footer-item:hover{color:var(--text)}
+.footer-item.active{color:var(--text)}
+.footer-live{color:var(--text)}
+#error{max-width:1080px;margin:20px auto;padding:14px 16px;border:1px solid #7a3d3d;background:#321b1b;color:#ffb5b5;border-radius:10px;display:none;font-size:13px}
+#loading{position:fixed;inset:0;background:rgba(17,19,24,.9);display:flex;align-items:center;justify-content:center;z-index:100;backdrop-filter:blur(10px)}
+.spinner{width:28px;height:28px;border:2px solid rgba(255,255,255,.14);border-top-color:var(--accent);border-radius:50%;animation:spin .75s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
 #modalBack,#nameBack{position:fixed;inset:0;background:rgba(0,0,0,.58);display:none;align-items:center;justify-content:center;padding:20px;z-index:90}
 #modal,#nameBox{width:min(460px,100%);background:var(--modal);border:1px solid var(--border);border-radius:16px;padding:24px;box-shadow:0 20px 70px rgba(0,0,0,.35)}
@@ -50,22 +80,6 @@ button,input,select{font:inherit}
 .note{font-size:12px;color:var(--muted);margin-top:6px}
 .name-subtitle{color:var(--muted);line-height:1.5;margin:0 0 18px}
 .name-note{font-size:12px;color:var(--muted);margin-top:7px}
-
-#status{margin-top:26px}
-#statusTitle{font-size:20px;font-weight:700;margin-bottom:12px}
-.status-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px}
-.status-card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:16px}
-.status-label{font-size:12px;color:var(--muted);margin-bottom:7px}
-.status-value{font-size:24px;font-weight:800;color:var(--text)}
-.status-sub{font-size:12px;color:var(--muted);margin-top:5px}
-.status-list{margin-top:12px;background:var(--card);border:1px solid var(--border);border-radius:12px;overflow:hidden}
-.status-list-title{padding:13px 15px;font-weight:700;border-bottom:1px solid var(--border)}
-.status-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 15px;border-bottom:1px solid var(--border)}
-.status-row:last-child{border-bottom:0}
-.status-row-name{font-weight:600}
-.status-row-count{color:var(--muted);font-size:13px;white-space:nowrap}
-.status-refresh{margin-top:12px;border:1px solid var(--border);border-radius:9px;padding:9px 13px;background:var(--card);color:var(--text);cursor:pointer}
-.status-error{margin-top:12px;color:#ffb5b5;font-size:13px}
 </style>
 </head>
 
@@ -82,39 +96,46 @@ button,input,select{font:inherit}
   </header>
 
   <section id="content">
-    <div class="welcome">
+    <div class="welcome" id="homeSection">
       <h1>Home</h1>
+      <div>A quiet place for your apps, posts, and LacesOS.</div>
     </div>
 
-    <div id="posts">
+    <div id="posts" style="scroll-margin-top:28px">
       <div id="postsTitle">Posts</div>
       <div id="postsList"></div>
     </div>
 
-    <div class="welcome" style="margin-bottom:18px">
-      <h1 style="font-size:20px">Apps</h1>
-    </div>
-
+    <div id="sectionLabel" style="scroll-margin-top:28px">Applications</div>
     <div id="apps"></div>
 
-    <section id="status">
-      <div id="statusTitle">Metrics</div>
-      <div id="statusGrid" class="status-grid">
-        <div class="status-card"><div class="status-label">Unique devices</div><div class="status-value" id="statDevices">—</div><div class="status-sub">Devices seen</div></div>
-        <div class="status-card"><div class="status-label">Unique logins today</div><div class="status-value" id="statToday">—</div><div class="status-sub">Different devices today</div></div>
-        <div class="status-card"><div class="status-label">Total login days</div><div class="status-value" id="statLoginDays">—</div><div class="status-sub">Device login days</div></div>
-        <div class="status-card"><div class="status-label">Total app opens</div><div class="status-value" id="statOpens">—</div><div class="status-sub">Across all apps</div></div>
-        <div class="status-card"><div class="status-label">Active now</div><div class="status-value" id="statActive">—</div><div class="status-sub">Seen in the last 15 minutes</div></div>
+    <section id="metrics">
+      <div id="metricsTitle">Metrics</div>
+      <div class="metrics-grid">
+        <div class="metric-card"><div class="metric-label">Unique devices</div><div class="metric-value" id="statDevices">—</div><div class="metric-sub">Devices seen</div></div>
+        <div class="metric-card"><div class="metric-label">Unique logins today</div><div class="metric-value" id="statToday">—</div><div class="metric-sub">Different devices today</div></div>
+        <div class="metric-card"><div class="metric-label">Total login days</div><div class="metric-value" id="statLoginDays">—</div><div class="metric-sub">Device login days</div></div>
+        <div class="metric-card"><div class="metric-label">Total app opens</div><div class="metric-value" id="statOpens">—</div><div class="metric-sub">Across all apps</div></div>
+        <div class="metric-card"><div class="metric-label">Active now</div><div class="metric-value" id="statActive">—</div><div class="metric-sub">Seen in the last 15 minutes</div></div>
       </div>
-      <div class="status-list">
-        <div class="status-list-title">Most opened apps</div>
-        <div id="mostOpened"><div class="status-row"><span class="status-row-name">Loading…</span></div></div>
+      <div class="metric-list">
+        <div class="metric-list-title">Most opened apps</div>
+        <div id="mostOpened"><div class="metric-row"><span class="metric-row-name">Loading…</span></div></div>
       </div>
-      <div id="statusError" class="status-error" style="display:none"></div>
+      <div id="metricError" class="metric-error" style="display:none"></div>
     </section>
-
     <div id="error"></div>
   </section>
+
+  <footer id="footer" aria-label="LacesOS navigation">
+    <button class="footer-item footer-live" data-target="homeSection" type="button">HOME</button>
+    <span class="footer-dot">/</span>
+    <button class="footer-item" data-target="posts" type="button">POSTS</button>
+    <span class="footer-dot">/</span>
+    <button class="footer-item" data-target="sectionLabel" type="button">APPS</button>
+    <span class="footer-dot">/</span>
+    <button class="footer-item" data-target="metrics" type="button">METRICS</button>
+  </footer>
 </main>
 
 <div id="nameBack">
@@ -197,15 +218,19 @@ async function supabaseRequest(path, options={}){
 
     const text=await response.text();
     let data=null;
-    try{ data=text ? JSON.parse(text) : null; }catch{}
+    try{data=text?JSON.parse(text):null;}catch{}
 
     if(!response.ok){
-      throw new Error(data?.message || data?.hint || text || ("Supabase request failed ("+response.status+")"));
+      throw new Error(
+        data?.message || data?.hint || text ||
+        ("Supabase request failed ("+response.status+")")
+      );
     }
 
     return data;
   }catch(error){
-    if(error.name==="AbortError") throw new Error("Supabase request timed out.");
+    if(error.name==="AbortError")
+      throw new Error("Supabase request timed out.");
     throw error;
   }finally{
     clearTimeout(timer);
@@ -213,7 +238,7 @@ async function supabaseRequest(path, options={}){
 }
 
 const REPO =
-  "https://cdn.jsdelivr.net/gh/sashabolton0-ux/chat@main/";
+  "https://raw.githubusercontent.com/sashabolton0-ux/chat/main/";
 
 const SETTINGS_KEY = "lacesos_settings_v2";
 const DEVICE_KEY = "lacesos_device_id_v1";
@@ -401,14 +426,21 @@ async function openApp(app){
 
   recordAppOpen(app.id || app.name, localStorage.getItem(USERNAME_KEY) || "");
 
-  // Open immediately from the user's click so the browser keeps a real
-  // about:blank tab.
+  // Open immediately from the user's click so the browser keeps the app in
+  // a real about:blank tab instead of creating a blob:null URL.
   const appWindow=window.open("about:blank","_blank");
 
   if(!appWindow){
     alert("The app could not be opened. Please allow pop-ups for LacesOS.");
     return;
   }
+
+  appWindow.document.open();
+  appWindow.document.write(
+    '<!doctype html><html><head><title>Loading…</title></head>' +
+    '<body style="font-family:system-ui;padding:24px">Loading app…</body></html>'
+  );
+  appWindow.document.close();
 
   try{
     const response=await fetch(
@@ -424,145 +456,37 @@ async function openApp(app){
 
     if(appWindow.closed)return;
 
+    // The app's folder becomes the base URL. This makes relative resources
+    // such as assets/foo.png, index.css, and index.js load from GitHub while
+    // the visible app URL remains about:blank.
     const cleanFile=String(app.file).split("?")[0].split("#")[0];
     const slash=cleanFile.lastIndexOf("/");
     const folder=slash>=0 ? cleanFile.slice(0,slash+1) : "";
     const baseURL=REPO+folder;
 
-    const parsed=new DOMParser().parseFromString(source,"text/html");
-    const targetDoc=appWindow.document;
+    const safeBase=baseURL
+      .replace(/&/g,"&amp;")
+      .replace(/"/g,"&quot;")
+      .replace(/</g,"&lt;")
+      .replace(/>/g,"&gt;");
 
-    const root=targetDoc.documentElement;
-    while(root.firstChild) root.removeChild(root.firstChild);
+    let html=source;
 
-    const head=targetDoc.createElement("head");
-    const body=targetDoc.createElement("body");
-    root.append(head,body);
+    // Remove an existing base tag so the LacesOS app path always wins.
+    html=html.replace(/<base\b[^>]*>/gi,"");
 
-    const base=targetDoc.createElement("base");
-    base.href=baseURL;
-    head.appendChild(base);
-
-    if(parsed.title){
-      targetDoc.title=parsed.title;
+    if(/<head\b[^>]*>/i.test(html)){
+      html=html.replace(
+        /<head\b([^>]*)>/i,
+        '<head$1><base href="'+safeBase+'">'
+      );
+    }else{
+      html='<head><base href="'+safeBase+'"></head>'+html;
     }
 
-    // Copy ordinary metadata and non-script head elements. GitHub-hosted
-    // CSS is fetched as text below instead of being loaded directly from
-    // raw.githubusercontent.com, which can be served as text/plain.
-    for(const node of Array.from(parsed.head.childNodes)){
-      if(node.nodeType!==Node.ELEMENT_NODE)continue;
-      const tag=node.tagName.toLowerCase();
-      if(tag==="base" || tag==="script" || tag==="link")continue;
-      head.appendChild(targetDoc.importNode(node,true));
-    }
-
-    // Load stylesheets as text. This makes local/GitHub CSS independent of
-    // the MIME type returned by raw GitHub hosting.
-    const links=Array.from(parsed.head.querySelectorAll('link[rel~="stylesheet"]'));
-    for(const oldLink of links){
-      const href=oldLink.getAttribute("href");
-      if(!href)continue;
-
-      const absoluteURL=new URL(href,baseURL).href;
-      const style=targetDoc.createElement("style");
-
-      if(absoluteURL.startsWith(REPO)){
-        const cssResponse=await fetch(absoluteURL+"?t="+Date.now(),{cache:"no-store"});
-        if(!cssResponse.ok){
-          throw new Error("App stylesheet could not be loaded: "+absoluteURL);
-        }
-        style.textContent=await cssResponse.text();
-      }else{
-        // Keep third-party stylesheets (such as Google Fonts) as normal links.
-        const link=targetDoc.createElement("link");
-        for(const attr of Array.from(oldLink.attributes)){
-          link.setAttribute(attr.name,attr.value);
-        }
-        link.href=absoluteURL;
-        head.appendChild(link);
-        continue;
-      }
-
-      head.appendChild(style);
-    }
-
-    // Fetch external JavaScript and inline the returned source. This is the
-    // important part: the browser never executes a raw GitHub URL as a
-    // <script src>, so strict MIME checking cannot block the Dino game.
-    const headScripts=Array.from(parsed.head.querySelectorAll("script"));
-    for(const oldScript of headScripts){
-      const script=targetDoc.createElement("script");
-      for(const attr of Array.from(oldScript.attributes)){
-        if(attr.name!=="src") script.setAttribute(attr.name,attr.value);
-      }
-
-      const src=oldScript.getAttribute("src");
-      if(src){
-        const absoluteURL=new URL(src,baseURL).href;
-
-        if(absoluteURL.startsWith(REPO)){
-          const jsResponse=await fetch(absoluteURL+"?t="+Date.now(),{cache:"no-store"});
-          if(!jsResponse.ok){
-            throw new Error("App script could not be loaded: "+absoluteURL);
-          }
-          script.textContent=(await jsResponse.text())+"\n//# sourceURL="+absoluteURL;
-        }else{
-          // Third-party scripts (for example Tailwind CDN) should stay as
-          // normal external scripts. Fetching them ourselves can fail because
-          // of CORS, even though the browser can load them directly.
-          script.src=absoluteURL;
-        }
-      }else{
-        script.textContent=oldScript.textContent||"";
-      }
-
-      head.appendChild(script);
-    }
-
-    // Copy body markup but hold scripts until after the body exists.
-    const bodyScripts=[];
-    for(const node of Array.from(parsed.body.childNodes)){
-      if(node.nodeType===Node.ELEMENT_NODE && node.tagName.toLowerCase()==="script"){
-        bodyScripts.push(node);
-      }else{
-        body.appendChild(targetDoc.importNode(node,true));
-      }
-    }
-
-    // Execute body scripts in their original order, also by fetching and
-    // inlining external source rather than using raw GitHub script URLs.
-    for(const oldScript of bodyScripts){
-      const script=targetDoc.createElement("script");
-      for(const attr of Array.from(oldScript.attributes)){
-        if(attr.name!=="src") script.setAttribute(attr.name,attr.value);
-      }
-
-      const src=oldScript.getAttribute("src");
-      if(src){
-        const absoluteURL=new URL(src,baseURL).href;
-
-        if(absoluteURL.startsWith(REPO)){
-          const jsResponse=await fetch(absoluteURL+"?t="+Date.now(),{cache:"no-store"});
-          if(!jsResponse.ok){
-            throw new Error("App script could not be loaded: "+absoluteURL);
-          }
-          script.textContent=(await jsResponse.text())+"\n//# sourceURL="+absoluteURL;
-        }else{
-          script.src=absoluteURL;
-        }
-      }else{
-        script.textContent=oldScript.textContent||"";
-      }
-
-      body.appendChild(script);
-    }
-
-    // The original Dino script listens for DOMContentLoaded. Fire it only
-    // after the complete DOM and all app scripts are ready.
-    targetDoc.dispatchEvent(new Event("DOMContentLoaded",{bubbles:true}));
-    targetDoc.dispatchEvent(new Event("load"));
-
+    appWindow.document.open();
+    appWindow.document.write(html);
+    appWindow.document.close();
     appWindow.focus();
   }catch(error){
     if(!appWindow.closed){
@@ -572,10 +496,12 @@ async function openApp(app){
         .replace(/>/g,"&gt;")
         .replace(/"/g,"&quot;");
 
-      appWindow.document.documentElement.innerHTML=
-        '<head><title>App error</title></head>'+
-        '<body style="font-family:system-ui;padding:24px">' +
-        '<h2>App could not be loaded</h2><p>'+message+'</p></body>';
+      appWindow.document.open();
+      appWindow.document.write(
+        '<!doctype html><html><body style="font-family:system-ui;padding:24px">' +
+        '<h2>App could not be loaded</h2><p>'+message+'</p></body></html>'
+      );
+      appWindow.document.close();
     }
   }
 }
@@ -638,6 +564,8 @@ async function loadApps(){
 
       const b=document.createElement("button");
       b.className="app";
+      b.dataset.appId=String(app.id||"");
+      b.dataset.appName=String(app.name||"App");
 
       const icon=document.createElement("span");
       icon.className="icon";
@@ -669,13 +597,12 @@ async function loadApps(){
   }
 }
 
-
 function formatNumber(value){
   return Number(value||0).toLocaleString();
 }
 
-async function loadStatus(){
-  const errorBox=document.getElementById("statusError");
+async function loadMetrics(){
+  const errorBox=document.getElementById("metricError");
   errorBox.style.display="none";
 
   try{
@@ -686,57 +613,69 @@ async function loadStatus(){
     });
 
     const stats=data?.stats || {};
-    const apps=Array.isArray(data?.most_opened_apps) ? data.most_opened_apps : [];
-
     document.getElementById("statDevices").textContent=formatNumber(stats.unique_devices);
     document.getElementById("statToday").textContent=formatNumber(stats.unique_logins_today);
     document.getElementById("statLoginDays").textContent=formatNumber(stats.total_login_days);
     document.getElementById("statOpens").textContent=formatNumber(stats.total_app_opens);
     document.getElementById("statActive").textContent=formatNumber(stats.active_devices);
 
+    const appNames={};
+    document.querySelectorAll("#apps .app").forEach(button=>{
+      const id=button.dataset.appId;
+      const name=button.dataset.appName;
+      if(id) appNames[id]=name||id;
+    });
+
     const list=document.getElementById("mostOpened");
+    const apps=Array.isArray(data?.most_opened_apps) ? data.most_opened_apps : [];
     if(!apps.length){
-      list.innerHTML='<div class="status-row"><span class="status-row-name">No app opens yet.</span></div>';
+      list.innerHTML='<div class="metric-row"><span class="metric-row-name">No app opens yet.</span></div>';
     }else{
       list.innerHTML="";
       for(const app of apps){
         const row=document.createElement("div");
-        row.className="status-row";
-
+        row.className="metric-row";
         const name=document.createElement("span");
-        name.className="status-row-name";
-        name.textContent=app.name || "Unknown app";
-
+        name.className="metric-row-name";
+        name.textContent=app.app_name || app.name || appNames[app.app_id] || app.app_id || "Unknown app";
         const count=document.createElement("span");
-        count.className="status-row-count";
+        count.className="metric-row-count";
         count.textContent=formatNumber(app.total_opens)+" opens";
-
         row.append(name,count);
         list.appendChild(row);
       }
     }
   }catch(error){
-    errorBox.textContent="Status is unavailable right now.";
+    errorBox.textContent="Metrics are unavailable right now.";
     errorBox.style.display="block";
-    console.warn("Status analytics failed:",error);
+    console.warn("Metrics analytics failed:",error);
   }
 }
 
 
+const footerButtons=document.querySelectorAll("#footer [data-target]");
+footerButtons.forEach(button=>{
+  button.addEventListener("click",()=>{
+    const target=document.getElementById(button.dataset.target);
+    if(!target)return;
+    target.scrollIntoView({behavior:"smooth",block:"start"});
+    footerButtons.forEach(b=>b.classList.remove("active"));
+    button.classList.add("active");
+  });
+});
+
 async function startHome(){
   showNamePrompt();
 
-  const loading=document.getElementById("loading");
+  // Both requests have their own 8-second timeout. Waiting for them here
+  // guarantees the Apps list has been built before Metrics resolves app IDs
+  // to names, without allowing the loading overlay to hang indefinitely.
+  await Promise.allSettled([loadPosts(),loadApps()]);
 
-  try{
-    await Promise.allSettled([
-      loadPosts(),
-      loadApps(),
-      loadStatus()
-    ]);
-  }finally{
-    loading.style.display="none";
-  }
+  // Metrics is independent; it can fail without blocking Home.
+  loadMetrics();
+
+  document.getElementById("loading").style.display="none";
 }
 
 startHome();
