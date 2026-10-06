@@ -376,9 +376,24 @@ async function openApp(app){
   }
 
   /*
-    Direct navigation avoids document.open()/document.write(),
-    which was one of the causes of the previous loop.
+    Open the app in a real about:blank browsing context.
+    Create it immediately from the user's click, then fetch the raw
+    GitHub HTML and inject it into that blank document.
   */
+  const appWindow=window.open("about:blank","_blank");
+
+  if(!appWindow){
+    alert("The app could not be opened. Please allow pop-ups for LacesOS.");
+    return;
+  }
+
+  appWindow.document.open();
+  appWindow.document.write(
+    '<!doctype html><html><head><title>Loading…</title></head>' +
+    '<body style="font-family:system-ui;padding:24px">Loading app…</body></html>'
+  );
+  appWindow.document.close();
+
   try{
     const response=await fetch(
       REPO+app.file+"?t="+Date.now(),
@@ -391,13 +406,29 @@ async function openApp(app){
 
     const source=await response.text();
 
-    const blob=new Blob([source],{type:"text/html"});
-    const url=URL.createObjectURL(blob);
+    if(appWindow.closed)return;
 
-    window.location.href=url;
+    appWindow.document.open();
+    appWindow.document.write(source);
+    appWindow.document.close();
+    appWindow.focus();
   }catch(error){
-    alert(error.message);
+    if(!appWindow.closed){
+      const message=String(error.message||error)
+        .replace(/&/g,"&amp;")
+        .replace(/</g,"&lt;")
+        .replace(/>/g,"&gt;")
+        .replace(/"/g,"&quot;");
+
+      appWindow.document.open();
+      appWindow.document.write(
+        '<!doctype html><html><body style="font-family:system-ui;padding:24px">' +
+        '<h2>App could not be loaded</h2><p>'+message+'</p></body></html>'
+      );
+      appWindow.document.close();
+    }
   }
+
 }
 
 async function loadPosts(){
