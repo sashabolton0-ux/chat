@@ -158,6 +158,18 @@ html,body{height:100%;overflow:hidden}
 
 
 
+/* Message stability fixes — preserve the LacesOS UI and use normal document flow. */
+.messages{display:block!important;min-height:0!important;overflow-y:auto!important;overflow-x:hidden!important;padding:28px 30px!important;}
+.message{display:block!important;position:relative!important;width:100%!important;box-sizing:border-box!important;margin:0 0 2px!important;padding:7px 10px 9px!important;min-height:0!important;height:auto!important;line-height:1.4!important;}
+.message-continued{padding:1px 10px 3px!important;margin-bottom:0!important;}
+.message-content{display:block!important;margin:2px 0 0!important;padding:0!important;line-height:1.45!important;white-space:normal!important;overflow-wrap:anywhere!important;word-break:break-word!important;}
+.message-continued .message-content{margin-top:0!important;}
+.message-content br{display:block!important;content:""!important;height:0!important;line-height:1.45!important;}
+.message-meta{display:flex!important;align-items:baseline!important;margin:0!important;padding:0!important;line-height:1.15!important;min-height:1.15em!important;}
+.message-divider{display:flex!important;align-items:center!important;gap:12px!important;margin:18px 10px 10px!important;padding:0!important;min-height:18px!important;line-height:1!important;}
+.message-divider::before,.message-divider::after{content:"";display:block!important;flex:1!important;height:1px!important;background:var(--lace-border)!important;}
+.message-divider span{white-space:nowrap!important;line-height:1!important;}
+
 /* LacesOS / Geist visual refresh */
 @import url('https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500;500&display=swap');
 
@@ -554,7 +566,7 @@ async function runServerCompliance() {
     }
 
     if (settings?.maintenance_mode) {
-      showLockout("Chat is temporarily unavailable", settings.maintenance_reason || "Down for updates", settings.download_url || "");
+      showLockout("Chat is temporarily unavailable, but maybe make sure you are on the right one, your version number is: 6.1", settings.maintenance_reason || "Down for updates, no need to download the new version, because you are on the right one.", settings.download_url || "");
       return false;
     }
 
@@ -589,6 +601,7 @@ function refreshDbClient() {
 window.state = {
   user: null, profile: null, channel: null, realtime: null,
   channels: [], messages: [], isAdmin: false,
+  messageLoadGeneration: 0, messageRenderGeneration: 0, channelSwitchGeneration: 0,
   dmThreads: [], unread: {}, people: []
 };
 const CHAT_SESSION_KEY = "chat_app_session_v7";
@@ -835,9 +848,8 @@ function renderChannels() {
 }
 async function selectChannel(channel) {
   if (!channel) return;
+  const switchGeneration = ++state.channelSwitchGeneration;
   state.channel = channel;
-  // Only mark a channel read when Chat is actually visible. If the browser tab
-  // is hidden, keep pings/unreads until the user returns to Chat.
   if (document.visibilityState === "visible" && document.hasFocus()) {
     state.unread["channel:" + channel.id] = 0;
   }
@@ -845,7 +857,13 @@ async function selectChannel(channel) {
   roomTitle.textContent = (channel.is_private ? "🔒 " : "# ") + channel.name;
   roomSubtitle.textContent = channel.is_private ? "Private channel" : "Text channel";
   messageInput.placeholder = "Message " + (channel.is_private ? "" : "#") + channel.name + "...";
-  await loadMessages(); await subscribeToChannel(channel);
+
+  // Subscribe before fetching so an INSERT during the fetch cannot fall into a gap.
+  await subscribeToChannel(channel, switchGeneration);
+  if (switchGeneration !== state.channelSwitchGeneration || state.channel !== channel) return;
+  await loadMessages();
+  if (switchGeneration !== state.channelSwitchGeneration || state.channel !== channel) return;
+  await loadMessages();
 }
 function dmRoom(username) {
   return "dm:" + [state.profile.username, username].sort((a,b) => a.localeCompare(b, undefined, {sensitivity:"base"})).join(":");
@@ -853,13 +871,21 @@ function dmRoom(username) {
 async function selectDM(username) {
   const name = username.trim();
   if (!name || name.toLowerCase() === state.profile.username.toLowerCase()) return;
-  state.channel = {id:null,name,is_private:true,is_dm:true,dm_username:name};
+  const channel = {id:null,name,is_private:true,is_dm:true,dm_username:name};
+  const switchGeneration = ++state.channelSwitchGeneration;
+  state.channel = channel;
   if (document.visibilityState === "visible" && document.hasFocus()) {
     state.unread["dm:" + name.toLowerCase()] = 0;
   }
   updateTabTitle(); renderChannels(); renderDMList();
-  roomTitle.textContent = "@ " + name; roomSubtitle.textContent = "Direct message"; messageInput.placeholder = "Message @" + name + "...";
-  await loadMessages(); await subscribeToChannel(state.channel);
+  roomTitle.textContent = "@ " + name;
+  roomSubtitle.textContent = "Direct message";
+  messageInput.placeholder = "Message @" + name + "...";
+  await subscribeToChannel(channel, switchGeneration);
+  if (switchGeneration !== state.channelSwitchGeneration || state.channel !== channel) return;
+  await loadMessages();
+  if (switchGeneration !== state.channelSwitchGeneration || state.channel !== channel) return;
+  await loadMessages();
 }
 async function loadDMThreads() {
   const me = state.profile.username;
@@ -1106,10 +1132,40 @@ async function enableNotifications() {
 if (notificationBtn) notificationBtn.onclick = enableNotifications;
 
 function renderMarkup(text,currentUsername){let s=escapeHtml(text);s=s.replace(/`([^`\n]+)`/g,"<code>$1</code>");s=s.replace(/\*\*([^*\n]+)\*\*/g,"<strong>$1</strong>");s=s.replace(/__([^_\n]+)__/g,"<u>$1</u>");s=s.replace(/~~([^~\n]+)~~/g,"<s>$1</s>");s=s.replace(/\*([^*\n]+)\*/g,"<em>$1</em>");s=s.replace(/^&gt;\s?(.*)$/gm,"<blockquote>$1</blockquote>");s=s.replace(/(^|[\s>])(@[A-Za-z0-9_]+)/g,(m,pre,mention)=>`${pre}<span class="${currentUsername&&mention.slice(1).toLowerCase()===currentUsername.toLowerCase()?"ping-mention ping-me":"ping-mention"}">${mention}</span>`);s=s.replace(/(^|[\s>])(https?:\/\/[^\s<]+)/g,'$1<a href="$2" target="_blank" rel="noopener noreferrer">$2</a>');return s.replace(/\n/g,"<br>")}
-async function loadMessages(){if(!state.channel)return;const room=state.channel.is_dm?dmRoom(state.channel.dm_username):"channel:"+state.channel.id;const {data,error}=await db.from("messages").select("id,sender_username,message_text,created_at,recipient_username,is_dm,channel_id,room_id").eq("room_id",room).order("created_at",{ascending:true}).limit(100);if(error)throw error;state.messages=data||[];renderMessages()}
+async function loadMessages(){
+  if(!state.channel)return;
+  const requestedRoom=state.channel.is_dm?dmRoom(state.channel.dm_username):"channel:"+state.channel.id;
+  const requestGeneration=++state.messageLoadGeneration;
+  const {data,error}=await db.from("messages")
+    .select("id,sender_username,message_text,created_at,recipient_username,is_dm,channel_id,room_id")
+    .eq("room_id",requestedRoom)
+    // Get the newest 100, not the oldest 100.
+    .order("created_at",{ascending:false})
+    .limit(100);
+  if(error){
+    console.error("Failed to load messages for",requestedRoom,error);
+    throw error;
+  }
+
+  const currentRoom=state.channel?.is_dm?dmRoom(state.channel.dm_username):"channel:"+state.channel?.id;
+  if(requestGeneration!==state.messageLoadGeneration || currentRoom!==requestedRoom)return;
+
+  const incoming=(data||[]).slice().reverse();
+  const byId=new Map(incoming.map(m=>[m.id,m]));
+  for(const existing of state.messages){
+    if(existing && existing.room_id===requestedRoom && !byId.has(existing.id))byId.set(existing.id,existing);
+  }
+  state.messages=[...byId.values()]
+    .filter(m=>m.room_id===requestedRoom)
+    .sort((a,b)=>new Date(a.created_at)-new Date(b.created_at))
+    .slice(-100);
+  await renderMessages();
+}
 async function sendMessage(text){if(!state.profile||state.profile.is_banned)throw new Error("Your account is unavailable.");if(!state.channel)return;const isDM=!!state.channel.is_dm;const room=isDM?dmRoom(state.channel.dm_username):"channel:"+state.channel.id;const {error}=await db.from("messages").insert({sender_username:state.profile.username,recipient_username:isDM?state.channel.dm_username:null,channel_id:isDM?null:state.channel.id,message_text:text,is_dm:isDM,room_id:room});if(error)throw error}
 window.sendMessage = sendMessage;
 async function renderMessages(){
+  const renderGeneration=++state.messageRenderGeneration;
+  const requestedRoom=state.channel?.is_dm?dmRoom(state.channel.dm_username):"channel:"+state.channel?.id;
   const box=document.getElementById("messages");
   if(!state.messages.length){
     box.innerHTML='<div class="empty">No messages yet. Start the conversation.</div>';
@@ -1121,9 +1177,13 @@ async function renderMessages(){
   const oldScrollTop=box.scrollTop;
 
   const names=[...new Set(state.messages.map(m=>m.sender_username))];
-  const {data:profiles}=await db.from("profiles")
+  const {data:profiles,error:profileError}=await db.from("profiles")
     .select("username,username_color,profile_tag")
     .in("username",names);
+  if(profileError)console.warn("Profile lookup failed while rendering messages:",profileError);
+  if(renderGeneration!==state.messageRenderGeneration)return;
+  const currentRoom=state.channel?.is_dm?dmRoom(state.channel.dm_username):"channel:"+state.channel?.id;
+  if(currentRoom!==requestedRoom)return;
   const map=Object.fromEntries((profiles||[]).map(p=>[p.username,p]));
 
   let previousSender=null, previousTime=0;
@@ -1179,6 +1239,9 @@ async function renderMessages(){
     previousTime=time.getTime();
   }
 
+  if(renderGeneration!==state.messageRenderGeneration)return;
+  const finalRoom=state.channel?.is_dm?dmRoom(state.channel.dm_username):"channel:"+state.channel?.id;
+  if(finalRoom!==requestedRoom)return;
   box.innerHTML=html;
 
   box.querySelectorAll("[data-invite]").forEach(btn=>{
@@ -1205,29 +1268,34 @@ async function acceptInvite(code){
 }
 function installComposer(){messageForm.onsubmit=async e=>{e.preventDefault();const raw=messageInput.value;const text=raw.trim();if(!text)return;const parts=text.split(/\s+/);const cmd=(parts[0]||"").toLowerCase();const arg=parts.slice(1).join(" ").trim();try{await ensureLoggedIn();if(cmd==="/ban"||cmd==="/unban"){if(!state.isAdmin)throw new Error("Only administrators can use that command.");messageInput.value="";await adminUserCommand(cmd.slice(1),arg);messageInput.focus();return}if(cmd==="/invite"){messageInput.value="";await showInvitePicker();messageInput.focus();return}await sendMessage(raw.trimEnd());messageInput.value="";messageInput.focus()}catch(err){toast(err?.message||String(err),true)}};messageInput.addEventListener("keydown",e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();messageForm.requestSubmit()}})}
 
-async function subscribeToChannel(channel){
-  if(state.realtime)await db.removeChannel(state.realtime);
+async function subscribeToChannel(channel, switchGeneration){
+  if(switchGeneration != null && switchGeneration !== state.channelSwitchGeneration)return;
+  if(state.realtime){
+    await db.removeChannel(state.realtime);
+    state.realtime=null;
+  }
+  if(switchGeneration != null && switchGeneration !== state.channelSwitchGeneration)return;
   const room=channel.is_dm?dmRoom(channel.dm_username):"channel:"+channel.id;
-  state.realtime=db.channel("chat:"+room).on("postgres_changes",{event:"INSERT",schema:"public",table:"messages",filter:"room_id=eq."+room},async payload=>{
+  const realtime=db.channel("chat:"+room);
+  state.realtime=realtime;
+  realtime.on("postgres_changes",{event:"INSERT",schema:"public",table:"messages",filter:"room_id=eq."+room},async payload=>{
+    if(switchGeneration != null && state.channelSwitchGeneration !== switchGeneration)return;
     if(state.messages.some(m=>m.id===payload.new.id))return;
     const mine=payload.new.sender_username===state.profile.username;
     const active=state.channel?.is_dm?dmRoom(state.channel.dm_username)===room:"channel:"+state.channel.id===room;
+    if(!active)return;
     state.messages.push(payload.new);
-    if(state.messages.length>100)state.messages=state.messages.slice(-100);
+    state.messages=state.messages.sort((a,b)=>new Date(a.created_at)-new Date(b.created_at)).slice(-100);
     if(!mine){
       const visibleFocused = document.visibilityState === "visible" && document.hasFocus();
       if(payload.new.is_dm){
-        const dmActive = active && visibleFocused;
-        if(!dmActive) addUnread("dm:"+String(payload.new.sender_username).toLowerCase());
+        if(!(active && visibleFocused))addUnread("dm:"+String(payload.new.sender_username).toLowerCase());
       }else{
-        const ping=new RegExp("@"+String(state.profile.username).replace(/[.*+?^${}()|[\\]\\]/g,"\\$&")+"\\b","i").test(payload.new.message_text||"");
+        const ping=new RegExp("@"+String(state.profile.username).replace(/[.*+?^${}()|[\]\\]/g,"\\$&")+"\b","i").test(payload.new.message_text||"");
         if(ping){
-          // A ping is read only when the user is actually looking at Chat.
-          // Being switched to the channel while the browser tab is hidden does not count.
-          if(!(active && visibleFocused)) addUnread("channel:"+payload.new.channel_id);
+          if(!(active && visibleFocused))addUnread("channel:"+payload.new.channel_id);
           const c=state.channels.find(x=>x.id===payload.new.channel_id);
-          if(document.visibilityState !== "visible") showPingNotification({sender:payload.new.sender_username,roomName:c?"# "+c.name:"Channel",messageId:payload.new.id});
-          else if(!active) showPingNotification({sender:payload.new.sender_username,roomName:c?"# "+c.name:"Channel",messageId:payload.new.id});
+          if(document.visibilityState !== "visible")showPingNotification({sender:payload.new.sender_username,roomName:c?"# "+c.name:"Channel",messageId:payload.new.id});
         }
       }
     }
@@ -1235,9 +1303,19 @@ async function subscribeToChannel(channel){
       state.dmThreads.unshift(payload.new.sender_username);renderDMList();
     }
     await renderMessages();
-  }).subscribe();
+  });
+  await new Promise((resolve,reject)=>{
+    let settled=false;
+    realtime.subscribe((status,error)=>{
+      if(status==="SUBSCRIBED"&&!settled){settled=true;resolve();}
+      else if((status==="CHANNEL_ERROR"||status==="TIMED_OUT")&&!settled){settled=true;reject(error||new Error("Realtime channel failed: "+status));}
+    });
+  });
+  if(switchGeneration != null && switchGeneration !== state.channelSwitchGeneration){
+    await db.removeChannel(realtime);
+    if(state.realtime===realtime)state.realtime=null;
+  }
 }
-
 async function subscribeBackgroundMessages(){
   if(state.backgroundRealtime)await db.removeChannel(state.backgroundRealtime);
   state.backgroundRealtime=db.channel("chat-background").on("postgres_changes",{event:"INSERT",schema:"public",table:"messages"},async payload=>{
