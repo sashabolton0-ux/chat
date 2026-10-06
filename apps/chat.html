@@ -156,6 +156,148 @@ html,body{height:100%;overflow:hidden}
 @keyframes pingIn{from{transform:translateY(8px);opacity:0}to{transform:translateY(0);opacity:1}}
 .notification-btn{position:relative}
 
+
+
+/* LacesOS / Geist visual refresh */
+@import url('https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500;500&display=swap');
+
+:root{
+  --lace-bg:#050505;
+  --lace-panel:#0a0a0a;
+  --lace-panel-2:#0f0f0f;
+  --lace-panel-3:#141414;
+  --lace-border:#262626;
+  --lace-border-soft:#1b1b1b;
+  --lace-text:#ededed;
+  --lace-muted:#8b8b8b;
+  --lace-faint:#5f5f5f;
+  --lace-hover:#111111;
+  --lace-active:#171717;
+  --lace-white:#ffffff;
+  --lace-green:#46d369;
+  --lace-red:#ff5f56;
+  --lace-blue:#8ab4ff;
+  font-family:'Geist',Inter,system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+}
+
+html,body{background:var(--lace-bg);color:var(--lace-text)}
+body{font-family:'Geist',Inter,system-ui,sans-serif;letter-spacing:-.012em}
+button,input,textarea{font-family:inherit}
+button{transition:background-color .16s ease,border-color .16s ease,color .16s ease,transform .16s ease}
+
+/* Auth */
+.auth-view{
+  background:
+    radial-gradient(circle at 50% -20%,#171717 0,transparent 42%),
+    var(--lace-bg);
+  padding:32px;
+}
+.auth-layout{width:min(980px,100%);gap:1px;background:var(--lace-border);border:1px solid var(--lace-border);border-radius:14px;overflow:hidden;box-shadow:0 30px 100px rgba(0,0,0,.45)}
+.auth-card,.login-news{
+  background:var(--lace-panel)!important;
+  border:0!important;
+  border-radius:0!important;
+  box-shadow:none!important;
+}
+.auth-card{padding:34px}
+.brand{font-size:25px;font-weight:600;letter-spacing:-.04em}
+.auth-card>p{color:var(--lace-muted)}
+.tabs{gap:0;border-bottom:1px solid var(--lace-border);margin:26px 0 20px}
+.tab{background:transparent!important;border:0!important;border-bottom:1px solid transparent!important;border-radius:0!important;color:var(--lace-muted);padding:11px 4px;margin-right:22px;font-weight:500}
+.tab:hover{color:var(--lace-text)}
+.tab.active{color:var(--lace-white)!important;border-bottom-color:var(--lace-white)!important}
+label{color:#bdbdbd;font-family:'Geist Mono',monospace;font-size:.72rem;letter-spacing:.02em;text-transform:uppercase}
+input,textarea{background:#0b0b0b!important;border:1px solid var(--lace-border)!important;border-radius:8px!important;color:var(--lace-text)!important;box-shadow:none!important}
+input:focus,textarea:focus{border-color:#555!important;outline:none!important}
+.primary{background:var(--lace-white)!important;color:#050505!important;border:1px solid var(--lace-white)!important;border-radius:8px!important;font-weight:600}
+.primary:hover{background:#dcdcdc!important;border-color:#dcdcdc!important}
+.secondary,.icon-btn,.small-icon-btn{background:transparent!important;border:1px solid var(--lace-border)!important;color:#bdbdbd!important;border-radius:8px!important}
+.secondary:hover,.icon-btn:hover,.small-icon-btn:hover{background:var(--lace-hover)!important;border-color:#3a3a3a!important;color:#fff!important}
+.notice{background:#101010!important;border:1px solid var(--lace-border)!important;border-radius:8px!important}
+.login-news{padding:34px!important;border-left:1px solid var(--lace-border)!important}
+.login-news-header{border-color:var(--lace-border)!important}
+.login-news-header h2{font-size:15px!important;font-weight:600;letter-spacing:-.02em}
+.login-news-item{background:transparent!important;border:0!important;border-bottom:1px solid var(--lace-border-soft)!important;border-radius:0!important;padding:14px 0!important}
+.login-news-item strong{font-weight:600}
+.login-news-item a{color:var(--lace-blue)}
+.section-title,.people-heading{font-family:'Geist Mono',monospace!important;font-size:.67rem!important;font-weight:500!important;letter-spacing:.08em!important;color:var(--lace-faint)!important}
+
+/* Main application */
+.app{background:var(--lace-bg)!important;grid-template-columns:245px minmax(0,1fr) 225px!important}
+.sidebar,.users-sidebar{background:var(--lace-panel)!important;border-color:var(--lace-border)!important}
+.sidebar-top{padding:17px 16px!important;background:var(--lace-panel)!important;border-color:var(--lace-border)!important}
+.sidebar-top strong{font-size:15px;font-weight:600;letter-spacing:-.025em}
+.sidebar-scroll{padding:8px 8px 0}
+.sidebar-section{padding:14px 0!important}
+.channel{color:#929292!important;border-radius:6px!important;margin:1px 0!important;width:100%!important;padding:8px 9px!important;font-size:14px}
+.channel:hover{background:var(--lace-hover)!important;color:#eee!important}
+.channel.active{background:var(--lace-active)!important;color:#fff!important}
+.channel.has-unread{font-weight:600!important}
+.notification-badge{background:#fff!important;color:#050505!important;border-radius:999px!important;font-family:'Geist Mono',monospace;font-size:.62rem!important}
+.sidebar-bottom{padding:12px!important;background:var(--lace-panel)!important;border-color:var(--lace-border)!important}
+
+.chat{background:var(--lace-bg)!important}
+.chat-header{height:64px;padding:13px 20px!important;background:rgba(5,5,5,.94)!important;border-bottom:1px solid var(--lace-border)!important;backdrop-filter:blur(14px)}
+.chat-header h1{font-size:15px!important;font-weight:600!important;letter-spacing:-.025em}
+.chat-header .muted{font-family:'Geist Mono',monospace;font-size:.66rem!important;color:var(--lace-faint)!important;text-transform:uppercase;letter-spacing:.05em}
+.chat-header-actions{display:flex;gap:7px}
+.chat-header-actions .secondary{font-family:'Geist Mono',monospace;font-size:.68rem;text-transform:uppercase;letter-spacing:.04em;padding:7px 10px}
+.messages{padding:28px 30px!important;background:var(--lace-bg)!important}
+.message{padding:7px 10px 10px!important;margin:0 -10px;border-radius:7px}
+.message:hover{background:#090909!important}
+.message-meta{gap:8px!important}
+.message-username{font-weight:600!important;letter-spacing:-.015em}
+.message-meta time{font-family:'Geist Mono',monospace;font-size:.63rem!important;color:var(--lace-faint)!important}
+.profile-tag{background:#171717!important;border:1px solid #292929!important;border-radius:4px!important;color:#a6a6a6!important;font-family:'Geist Mono',monospace;font-size:.62rem!important;font-weight:500!important}
+.message-content{color:#d8d8d8!important;line-height:1.55!important;font-size:14px}
+.message-content code{background:#0c0c0c!important;border:1px solid #292929!important}
+.message-content blockquote{border-color:#4a4a4a!important;color:#9c9c9c!important}
+.message-content a{color:var(--lace-blue)!important}
+.message-divider{font-family:'Geist Mono',monospace!important;font-size:.63rem!important;font-weight:500!important;color:var(--lace-faint)!important;letter-spacing:.03em}
+.message-divider::before,.message-divider::after{background:var(--lace-border)!important}
+
+.composer{padding:12px 18px!important;background:var(--lace-panel)!important;border-top:1px solid var(--lace-border)!important}
+.chat-input{background:#0b0b0b!important;border:1px solid var(--lace-border)!important;border-radius:8px!important;min-height:46px!important}
+.chat-input::placeholder{color:#5f5f5f}
+.send{min-width:68px}
+
+.users-sidebar{padding:15px 10px!important}
+.user-list{gap:2px!important}
+.user-row{color:#969696!important;border-radius:6px!important;padding:7px 8px!important}
+.user-row:hover{background:var(--lace-hover)!important;color:#eee!important}
+.user-name{font-weight:500!important}
+.user-state{font-family:'Geist Mono',monospace!important;color:#5f5f5f!important}
+.status-dot.online{background:var(--lace-green)!important;box-shadow:0 0 7px rgba(70,211,105,.35)}
+.status-dot.offline{background:#444!important}
+.dm-action-btn{background:transparent!important;border-color:#252525!important;color:#777!important}
+.dm-action-btn:hover{background:#151515!important;color:#ddd!important}
+
+/* Dialogs */
+dialog{background:var(--lace-panel)!important;border:1px solid var(--lace-border)!important;border-radius:12px!important;box-shadow:0 30px 100px rgba(0,0,0,.7)!important}
+dialog::backdrop{background:rgba(0,0,0,.72)!important;backdrop-filter:blur(5px)}
+.modal{padding:25px!important}
+.modal h2{font-size:19px;font-weight:600;letter-spacing:-.025em}
+.modal-close{color:#777!important}
+.modal-close:hover{color:#fff!important}
+.panel{background:#0b0b0b!important;border-color:var(--lace-border)!important;border-radius:8px!important}
+.device-row{border-color:var(--lace-border)!important;border-radius:8px!important;background:#090909}
+.dm-picker-row:hover{background:#111!important}
+.toast{background:#101010!important;border:1px solid #303030!important;border-radius:8px!important}
+
+/* Tiny system-like labels */
+.small{font-size:.78rem}
+.muted{color:var(--lace-muted)!important}
+
+@media(max-width:900px){.app{grid-template-columns:220px minmax(0,1fr)!important}}
+@media(max-width:760px){
+  .auth-view{padding:14px}
+  .auth-layout{border-radius:10px}
+  .auth-card,.login-news{padding:24px!important}
+  .app{grid-template-columns:1fr!important}
+  .sidebar{max-height:none}
+  .messages{padding:20px 15px!important}
+}
+
 </style>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
