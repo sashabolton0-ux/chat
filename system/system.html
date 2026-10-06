@@ -401,21 +401,15 @@ async function openApp(app){
 
   recordAppOpen(app.id || app.name, localStorage.getItem(USERNAME_KEY) || "");
 
-  // Open immediately from the user's click so the browser keeps the app in
-  // a real about:blank tab instead of creating a blob:null URL.
+  // Open immediately from the user's click so the browser keeps a real
+  // about:blank tab. The app itself is then built into that document with
+  // DOM APIs instead of document.write'ing the entire fetched page.
   const appWindow=window.open("about:blank","_blank");
 
   if(!appWindow){
     alert("The app could not be opened. Please allow pop-ups for LacesOS.");
     return;
   }
-
-  appWindow.document.open();
-  appWindow.document.write(
-    '<!doctype html><html><head><title>Loading…</title></head>' +
-    '<body style="font-family:system-ui;padding:24px">Loading app…</body></html>'
-  );
-  appWindow.document.close();
 
   try{
     const response=await fetch(
@@ -431,37 +425,95 @@ async function openApp(app){
 
     if(appWindow.closed)return;
 
-    // The app's folder becomes the base URL. This makes relative resources
-    // such as assets/foo.png, index.css, and index.js load from GitHub while
-    // the visible app URL remains about:blank.
     const cleanFile=String(app.file).split("?")[0].split("#")[0];
     const slash=cleanFile.lastIndexOf("/");
     const folder=slash>=0 ? cleanFile.slice(0,slash+1) : "";
     const baseURL=REPO+folder;
 
-    const safeBase=baseURL
-      .replace(/&/g,"&amp;")
-      .replace(/"/g,"&quot;")
-      .replace(/</g,"&lt;")
-      .replace(/>/g,"&gt;");
+    const parsed=new DOMParser().parseFromString(source,"text/html");
+    const targetDoc=appWindow.document;
 
-    let html=source;
+    // Build a normal HTML document without injecting the fetched source
+    // through document.write. This keeps external scripts in normal DOM
+    // loading order and avoids the fragile about:blank parser behavior.
+    const root=targetDoc.documentElement;
+    while(root.firstChild) root.removeChild(root.firstChild);
 
-    // Remove an existing base tag so the LacesOS app path always wins.
-    html=html.replace(/<base\b[^>]*>/gi,"");
+    const head=targetDoc.createElement("head");
+    const body=targetDoc.createElement("body");
+    root.append(head,body);
 
-    if(/<head\b[^>]*>/i.test(html)){
-      html=html.replace(
-        /<head\b([^>]*)>/i,
-        '<head$1><base href="'+safeBase+'">'
-      );
-    }else{
-      html='<head><base href="'+safeBase+'"></head>'+html;
+    const base=targetDoc.createElement("base");
+    base.href=baseURL;
+    head.appendChild(base);
+
+    // Copy metadata/styles/other head elements, but load scripts separately.
+    for(const node of Array.from(parsed.head.childNodes)){
+      if(node.nodeType!==Node.ELEMENT_NODE)continue;
+      if(node.tagName.toLowerCase()==="base" || node.tagName.toLowerCase()==="script")continue;
+      head.appendChild(targetDoc.importNode(node,true));
     }
 
-    appWindow.document.open();
-    appWindow.document.write(html);
-    appWindow.document.close();
+    // Load external scripts in their original order before the body scripts.
+    // The Dino game has its main index.js in <head>, so this preserves its
+    // original initialization sequence.
+    const headScripts=Array.from(parsed.head.querySelectorAll("script"));
+    for(const oldScript of headScripts){
+      const script=targetDoc.createElement("script");
+      for(const attr of Array.from(oldScript.attributes)){
+        if(attr.name!=="src") script.setAttribute(attr.name,attr.value);
+      }
+
+      if(oldScript.src || oldScript.getAttribute("src")){
+        const src=oldScript.getAttribute("src");
+        script.src=new URL(src,baseURL).href;
+        await new Promise((resolve,reject)=>{
+          script.onload=resolve;
+          script.onerror=()=>reject(new Error("App script could not be loaded: "+script.src));
+          head.appendChild(script);
+        });
+      }else{
+        script.textContent=oldScript.textContent||"";
+        head.appendChild(script);
+      }
+    }
+
+    // Copy the body markup without executing its scripts during parsing.
+    const bodyScripts=[];
+    for(const node of Array.from(parsed.body.childNodes)){
+      if(node.nodeType===Node.ELEMENT_NODE && node.tagName.toLowerCase()==="script"){
+        bodyScripts.push(node);
+      }else{
+        body.appendChild(targetDoc.importNode(node,true));
+      }
+    }
+
+    // Execute inline body scripts after the body exists, in source order.
+    for(const oldScript of bodyScripts){
+      const script=targetDoc.createElement("script");
+      for(const attr of Array.from(oldScript.attributes)){
+        if(attr.name!=="src") script.setAttribute(attr.name,attr.value);
+      }
+
+      if(oldScript.src || oldScript.getAttribute("src")){
+        const src=oldScript.getAttribute("src");
+        script.src=new URL(src,baseURL).href;
+        await new Promise((resolve,reject)=>{
+          script.onload=resolve;
+          script.onerror=()=>reject(new Error("App script could not be loaded: "+script.src));
+          body.appendChild(script);
+        });
+      }else{
+        script.textContent=oldScript.textContent||"";
+        body.appendChild(script);
+      }
+    }
+
+    // The original Dino script listens for DOMContentLoaded. Because this
+    // document is assembled programmatically, fire that event after the
+    // complete app DOM and scripts are in place.
+    targetDoc.dispatchEvent(new Event("DOMContentLoaded",{bubbles:true}));
+
     appWindow.focus();
   }catch(error){
     if(!appWindow.closed){
@@ -471,12 +523,10 @@ async function openApp(app){
         .replace(/>/g,"&gt;")
         .replace(/"/g,"&quot;");
 
-      appWindow.document.open();
-      appWindow.document.write(
-        '<!doctype html><html><body style="font-family:system-ui;padding:24px">' +
-        '<h2>App could not be loaded</h2><p>'+message+'</p></body></html>'
-      );
-      appWindow.document.close();
+      appWindow.document.documentElement.innerHTML=
+        '<head><title>App error</title></head>'+
+        '<body style="font-family:system-ui;padding:24px">' +
+        '<h2>App could not be loaded</h2><p>'+message+'</p></body>';
     }
   }
 }
