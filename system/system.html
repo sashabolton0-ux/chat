@@ -7,21 +7,22 @@
 <meta name="theme-color" content="#111318">
 <title>LacesOS</title>
 <link id="favicon" rel="icon" href="data:,">
+
 <style>
 :root{color-scheme:dark}
 *{box-sizing:border-box}
 html,body{margin:0;width:100%;height:100%;font-family:system-ui,-apple-system,Segoe UI,sans-serif}
-body{overflow:hidden;background:var(--bg);color:var(--text);transition:background .15s,color .15s}
+body{overflow:hidden;background:var(--bg);color:var(--text)}
 button,input,select{font:inherit}
-#main{width:100%;height:100%;display:flex;flex-direction:column;min-width:0}
-#top{display:none}
-#settingsBtn{position:fixed;left:18px;bottom:18px;z-index:20;border:1px solid var(--border);background:var(--card);color:var(--text);padding:10px 14px;border-radius:10px;cursor:pointer;box-shadow:0 8px 28px rgba(0,0,0,.28)}
+#main{width:100%;height:100%;display:flex;flex-direction:column}
+#top{height:68px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;padding:0 28px;font-weight:700;font-size:20px;flex-shrink:0}
+#settingsBtn{border:1px solid var(--border);background:var(--card);color:var(--text);padding:9px 13px;border-radius:9px;cursor:pointer}
 #settingsBtn:hover{background:var(--hover)}
 #content{flex:1;overflow:auto;padding:34px 38px;color:var(--muted)}
-#content .welcome{text-align:center;margin:0 auto 28px;max-width:900px}
-#content h1{color:var(--text);margin:0 0 8px;font-size:30px}
+.welcome{text-align:center;margin:0 auto 28px;max-width:900px}
+.welcome h1{color:var(--text);margin:0 0 8px;font-size:30px}
 #apps{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:22px;max-width:1200px;margin:0 auto}
-.app{border:1px solid var(--border);background:var(--card);color:var(--text);border-radius:16px;cursor:pointer;min-height:180px;padding:22px 18px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;transition:transform .12s ease,background .12s ease,border-color .12s ease}
+.app{border:1px solid var(--border);background:var(--card);color:var(--text);border-radius:16px;cursor:pointer;min-height:180px;padding:22px 18px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center}
 .app:hover{background:var(--hover);border-color:var(--border2);transform:translateY(-2px)}
 .icon{font-size:46px;line-height:1;margin-bottom:16px}
 .name{font-weight:700;font-size:17px}
@@ -33,9 +34,13 @@ button,input,select{font:inherit}
 .post .date{font-size:12px;color:var(--muted);margin-bottom:10px}
 .post .body{color:var(--text);line-height:1.5;white-space:pre-wrap}
 .emptyPosts{color:var(--muted);font-size:14px}
-#modalBack{position:fixed;inset:0;background:rgba(0,0,0,.58);display:none;align-items:center;justify-content:center;padding:20px}
-#modal{width:min(460px,100%);background:var(--modal);border:1px solid var(--border);border-radius:16px;padding:24px;box-shadow:0 20px 70px rgba(0,0,0,.35)}
-#modal h2{margin:0 0 20px;color:var(--text)}
+#error{max-width:900px;margin:20px auto;padding:16px;border:1px solid #7a3d3d;background:#321b1b;color:#ffb5b5;border-radius:12px;display:none}
+#loading{position:fixed;inset:0;background:rgba(17,19,24,.86);display:flex;align-items:center;justify-content:center;z-index:100}
+.spinner{width:42px;height:42px;border:4px solid rgba(255,255,255,.18);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+#modalBack,#nameBack{position:fixed;inset:0;background:rgba(0,0,0,.58);display:none;align-items:center;justify-content:center;padding:20px;z-index:90}
+#modal,#nameBox{width:min(460px,100%);background:var(--modal);border:1px solid var(--border);border-radius:16px;padding:24px;box-shadow:0 20px 70px rgba(0,0,0,.35)}
+#modal h2,#nameBox h2{margin:0 0 10px;color:var(--text)}
 .field{margin:15px 0}
 .field label{display:block;font-size:13px;font-weight:700;margin-bottom:7px;color:var(--muted)}
 .field input,.field select{width:100%;padding:11px 12px;border-radius:9px;border:1px solid var(--border);background:var(--input);color:var(--text)}
@@ -43,42 +48,78 @@ button,input,select{font:inherit}
 .actions button{border:1px solid var(--border);border-radius:9px;padding:10px 14px;background:var(--card);color:var(--text);cursor:pointer}
 .actions .save{background:var(--accent);border-color:var(--accent);color:#fff}
 .note{font-size:12px;color:var(--muted);margin-top:6px}
-#error{max-width:900px;margin:20px auto;padding:16px;border:1px solid #7a3d3d;background:#321b1b;color:#ffb5b5;border-radius:12px;display:none}
+.name-subtitle{color:var(--muted);line-height:1.5;margin:0 0 18px}
+.name-note{font-size:12px;color:var(--muted);margin-top:7px}
 </style>
 </head>
+
 <body>
+
+<div id="loading" aria-label="Loading">
+  <div class="spinner"></div>
+</div>
+
 <main id="main">
-  <button id="settingsBtn" type="button">⚙ Settings</button>
+  <header id="top">
+    <span id="systemName">LacesOS</span>
+    <button id="settingsBtn" type="button">⚙ Settings</button>
+  </header>
 
   <section id="content">
     <div class="welcome">
       <h1>Home</h1>
-      <div>Posts and apps.</div>
+      <div>Settings</div>
     </div>
+
     <div id="posts">
       <div id="postsTitle">Posts</div>
       <div id="postsList"></div>
     </div>
+
     <div class="welcome" style="margin-bottom:18px">
       <h1 style="font-size:20px">Apps</h1>
     </div>
+
     <div id="apps"></div>
     <div id="error"></div>
   </section>
 </main>
 
+<div id="nameBack">
+  <div id="nameBox" role="dialog" aria-modal="true" aria-labelledby="nameTitle">
+    <h2 id="nameTitle">Welcome to LacesOS</h2>
+    <p class="name-subtitle">
+      Before you continue, choose a username.
+    </p>
+
+    <div class="field">
+      <label for="nameInput">Username</label>
+      <input id="nameInput" type="text" maxlength="80" autocomplete="name" autofocus>
+      <div class="name-note">Use your real name.</div>
+      <div class="name-note">This is used for verification.</div>
+    </div>
+
+    <div class="actions">
+      <button id="saveName" class="save" type="button">Continue</button>
+    </div>
+  </div>
+</div>
+
 <div id="modalBack">
   <div id="modal" role="dialog" aria-modal="true" aria-labelledby="settingsTitle">
     <h2 id="settingsTitle">Settings</h2>
+
     <div class="field">
       <label for="tabName">Tab name</label>
       <input id="tabName" type="text" maxlength="80" placeholder="LacesOS">
     </div>
+
     <div class="field">
       <label for="iconUrl">Tab icon URL</label>
       <input id="iconUrl" type="url" placeholder="https://example.com/icon.png">
       <div class="note">Use a direct image URL.</div>
     </div>
+
     <div class="field">
       <label for="theme">Theme</label>
       <select id="theme">
@@ -87,6 +128,7 @@ button,input,select{font:inherit}
         <option value="system">System default</option>
       </select>
     </div>
+
     <div class="actions">
       <button id="cancelSettings" type="button">Cancel</button>
       <button id="saveSettings" class="save" type="button">Save</button>
@@ -95,92 +137,350 @@ button,input,select{font:inherit}
 </div>
 
 <script>
-const REPO="https://raw.githubusercontent.com/sashabolton0-ux/chat/main/";
-const APPS_URL=REPO+"system/apps.json";
-const POSTS_URL=REPO+"system/posts.json";
-const SETTINGS_KEY="system_settings_v1";
+const CONTENT_URL =
+  "https://script.google.com/macros/s/AKfycbw2BNRSCl9_9iMcxxlgx-8BFrLwkAXMpe1JS3nzgkcD7mvFuAnRrfW2e521M2cBrc6g/exec";
 
-const themes={
-  dark:{bg:"#111318",text:"#fff",muted:"#8d94a3",border:"#2b2f38",border2:"#414856",card:"#181b22",hover:"#222731",modal:"#181b22",input:"#111318",accent:"#5865f2"},
-  light:{bg:"#f4f5f7",text:"#17191d",muted:"#68707d",border:"#d9dde4",border2:"#b9c0cb",card:"#fff",hover:"#e9ecf1",modal:"#fff",input:"#f4f5f7",accent:"#4f5bd5"}
+const REPO =
+  "https://raw.githubusercontent.com/sashabolton0-ux/chat/main/";
+
+const SETTINGS_KEY = "lacesos_settings_v2";
+const DEVICE_KEY = "lacesos_device_id_v1";
+const USERNAME_KEY = "lacesos_username_v1";
+
+const themes = {
+  dark:{
+    bg:"#111318",text:"#fff",muted:"#8d94a3",border:"#2b2f38",
+    border2:"#414856",card:"#181b22",hover:"#222731",
+    modal:"#181b22",input:"#111318",accent:"#5865f2"
+  },
+  light:{
+    bg:"#f4f5f7",text:"#17191d",muted:"#68707d",border:"#d9dde4",
+    border2:"#b9c0cb",card:"#fff",hover:"#e9ecf1",
+    modal:"#fff",input:"#f4f5f7",accent:"#4f5bd5"
+  }
 };
 
-function getSettings(){try{return JSON.parse(localStorage.getItem(SETTINGS_KEY)||"{}")}catch{return{}}}
-function saveSettings(s){localStorage.setItem(SETTINGS_KEY,JSON.stringify(s))}
-function resolvedTheme(mode){return mode==="system"?(matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light"):(mode==="light"?"light":"dark")}
+function getSettings(){
+  try{
+    return JSON.parse(localStorage.getItem(SETTINGS_KEY)||"{}");
+  }catch{
+    return {};
+  }
+}
+
+function saveSettings(s){
+  localStorage.setItem(SETTINGS_KEY,JSON.stringify(s));
+}
+
+function resolvedTheme(mode){
+  return mode==="system"
+    ? (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light")
+    : (mode==="light" ? "light" : "dark");
+}
+
 function applySettings(){
-  const s=getSettings(), t=themes[resolvedTheme(s.theme||"dark")];
-  for(const [k,v] of Object.entries(t)) document.documentElement.style.setProperty("--"+k,v);
-  document.title="LacesOS";
+  const s=getSettings();
+  const t=themes[resolvedTheme(s.theme||"dark")];
+
+  for(const [k,v] of Object.entries(t)){
+    document.documentElement.style.setProperty("--"+k,v);
+  }
+
+  document.title=s.tabName?.trim()||"LacesOS";
+  document.getElementById("systemName").textContent="LacesOS";
   document.querySelector('meta[name="theme-color"]').content=t.bg;
   document.getElementById("favicon").href=s.iconUrl?.trim()||"data:,";
 }
+
 applySettings();
-matchMedia("(prefers-color-scheme: dark)").addEventListener?.("change",()=>{if((getSettings().theme||"dark")==="system")applySettings()});
+
+matchMedia("(prefers-color-scheme: dark)")
+  .addEventListener?.("change",()=>{
+    if((getSettings().theme||"dark")==="system") applySettings();
+  });
+
+function getDeviceId(){
+  let id=localStorage.getItem(DEVICE_KEY);
+
+  if(!id){
+    if(window.crypto && crypto.randomUUID){
+      id="dev_"+crypto.randomUUID();
+    }else{
+      id="dev_"+Date.now().toString(36)+"_"+Math.random().toString(36).slice(2,12);
+    }
+
+    localStorage.setItem(DEVICE_KEY,id);
+  }
+
+  return id;
+}
+
+/*
+  JSONP is intentional here.
+  This keeps the local HTML from getting trapped in Apps Script
+  fetch/CORS redirects.
+*/
+function callContent(type, extra={}){
+  return new Promise((resolve,reject)=>{
+    const callbackName =
+      "__lacesos_cb_" +
+      Date.now() +
+      "_" +
+      Math.random().toString(36).slice(2);
+
+    const params=new URLSearchParams({
+      type,
+      callback:callbackName,
+      _:Date.now().toString()
+    });
+
+    for(const [key,value] of Object.entries(extra)){
+      params.set(key,String(value));
+    }
+
+    const script=document.createElement("script");
+    let finished=false;
+
+    const cleanup=()=>{
+      if(script.parentNode) script.parentNode.removeChild(script);
+      try{delete window[callbackName]}catch{}
+    };
+
+    const timer=setTimeout(()=>{
+      if(finished)return;
+      finished=true;
+      cleanup();
+      reject(new Error("Content service timed out."));
+    },12000);
+
+    window[callbackName]=(data)=>{
+      if(finished)return;
+      finished=true;
+      clearTimeout(timer);
+      cleanup();
+
+      if(!data || data.error){
+        reject(new Error(data?.message || "Content service returned an error."));
+        return;
+      }
+
+      resolve(data);
+    };
+
+    script.onerror=()=>{
+      if(finished)return;
+      finished=true;
+      clearTimeout(timer);
+      cleanup();
+      reject(new Error("Content service could not be reached."));
+    };
+
+    script.src=CONTENT_URL+"?"+params.toString();
+    document.head.appendChild(script);
+  });
+}
+
+function showNamePrompt(){
+  const saved=localStorage.getItem(USERNAME_KEY);
+
+  if(saved && saved.trim()){
+    registerDevice(saved.trim());
+    return;
+  }
+
+  const back=document.getElementById("nameBack");
+  const input=document.getElementById("nameInput");
+
+  back.style.display="flex";
+  setTimeout(()=>input.focus(),50);
+
+  document.getElementById("saveName").onclick=async()=>{
+    const name=input.value.trim();
+
+    if(!name){
+      input.focus();
+      return;
+    }
+
+    localStorage.setItem(USERNAME_KEY,name);
+    back.style.display="none";
+
+    registerDevice(name);
+  };
+}
+
+async function registerDevice(username){
+  try{
+    await callContent("register_device",{
+      device_id:getDeviceId(),
+      username
+    });
+  }catch(error){
+    console.warn("Device registration failed:",error);
+    // The system still works if analytics is temporarily unavailable.
+  }
+}
 
 const modalBack=document.getElementById("modalBack");
+const tabName=document.getElementById("tabName");
+const iconUrl=document.getElementById("iconUrl");
+const theme=document.getElementById("theme");
+
 document.getElementById("settingsBtn").onclick=()=>{
   const s=getSettings();
-  tabName.value=s.tabName||"LacesOS"; iconUrl.value=s.iconUrl||""; theme.value=s.theme||"dark";
-  modalBack.style.display="flex"; tabName.focus();
+  tabName.value=s.tabName||"LacesOS";
+  iconUrl.value=s.iconUrl||"";
+  theme.value=s.theme||"dark";
+  modalBack.style.display="flex";
+  tabName.focus();
 };
-const tabName=document.getElementById("tabName"), iconUrl=document.getElementById("iconUrl"), theme=document.getElementById("theme");
-document.getElementById("cancelSettings").onclick=()=>modalBack.style.display="none";
-modalBack.onclick=e=>{if(e.target===modalBack)modalBack.style.display="none"};
+
+document.getElementById("cancelSettings").onclick=()=>{
+  modalBack.style.display="none";
+};
+
+modalBack.onclick=e=>{
+  if(e.target===modalBack) modalBack.style.display="none";
+};
+
 document.getElementById("saveSettings").onclick=()=>{
-  saveSettings({tabName:tabName.value.trim()||"LacesOS",iconUrl:iconUrl.value.trim(),theme:theme.value});
-  applySettings(); modalBack.style.display="none";
+  saveSettings({
+    tabName:tabName.value.trim()||"LacesOS",
+    iconUrl:iconUrl.value.trim(),
+    theme:theme.value
+  });
+
+  applySettings();
+  modalBack.style.display="none";
 };
 
 async function openApp(app){
   if(!app.file)return;
-  try{
-    const r=await fetch(REPO+app.file+"?t="+Date.now(),{cache:"no-store"});
-    if(!r.ok)throw new Error("App could not be loaded ("+r.status+").");
-    document.open();
-    document.write(await r.text());
-    document.close();
-  }catch(e){alert(e.message)}
+
+  const status=String(app.status||"on").trim().toLowerCase();
+
+  if(status==="hidden")return;
+
+  if(status==="maintenance"){
+    alert(app.warning?.trim()||"This app is currently under maintenance.");
+    return;
+  }
+
+  const warning=String(app.warning||"").trim();
+
+  if(status==="on" && warning){
+    if(!confirm(warning+"\n\nContinue?")) return;
+  }
+
+  /*
+    Direct navigation avoids document.open()/document.write(),
+    which was one of the causes of the previous loop.
+  */
+  window.location.href=
+    REPO+
+    app.file+
+    "?t="+
+    Date.now();
 }
 
 async function loadPosts(){
   const list=document.getElementById("postsList");
+
   try{
-    const r=await fetch(POSTS_URL+"?t="+Date.now(),{cache:"no-store"});
-    if(!r.ok)throw new Error("posts.json could not be loaded ("+r.status+").");
-    const data=await r.json();
+    const data=await callContent("posts");
     const posts=Array.isArray(data.posts)?data.posts:[];
-    if(!posts.length){list.innerHTML='<div class="emptyPosts">No posts yet.</div>';return}
+
+    if(!posts.length){
+      list.innerHTML='<div class="emptyPosts">No posts yet.</div>';
+      return;
+    }
+
     list.innerHTML="";
+
     for(const p of posts){
       const el=document.createElement("article");
       el.className="post";
-      const title=document.createElement("h3"); title.textContent=p.title||"Post";
-      const date=document.createElement("div"); date.className="date"; date.textContent=p.date||"";
-      const body=document.createElement("div"); body.className="body"; body.textContent=p.body||"";
-      el.append(title,date,body); list.appendChild(el);
+
+      const title=document.createElement("h3");
+      title.textContent=p.title||"Post";
+
+      const date=document.createElement("div");
+      date.className="date";
+      date.textContent=p.date||"";
+
+      const body=document.createElement("div");
+      body.className="body";
+      body.textContent=p.body||"";
+
+      el.append(title,date,body);
+      list.appendChild(el);
     }
-  }catch(e){list.innerHTML='<div class="emptyPosts">Posts are unavailable right now.</div>'}
+  }catch(error){
+    list.innerHTML=
+      '<div class="emptyPosts">Posts are unavailable right now.</div>';
+    console.warn(error);
+  }
 }
 
 async function loadApps(){
-  const box=document.getElementById("apps"), err=document.getElementById("error");
+  const box=document.getElementById("apps");
+  const err=document.getElementById("error");
+
   try{
-    const r=await fetch(APPS_URL+"?t="+Date.now(),{cache:"no-store"});
-    if(!r.ok)throw new Error("apps.json could not be loaded ("+r.status+").");
-    const data=await r.json(); box.innerHTML="";
+    const data=await callContent("apps");
+    box.innerHTML="";
+
     for(const app of (data.apps||[])){
-      const b=document.createElement("button"); b.className="app";
-      b.innerHTML='<span class="icon"></span><span><div class="name"></div><div class="sub"></div></span>';
-      b.querySelector(".icon").textContent=app.icon||"◼";
-      b.querySelector(".name").textContent=app.name||"App";
-      b.querySelector(".sub").textContent=app.description||"";
-      b.onclick=()=>openApp(app); box.appendChild(b);
+      const status=String(app.status||"on").trim().toLowerCase();
+
+      if(status==="hidden")continue;
+
+      const b=document.createElement("button");
+      b.className="app";
+
+      const icon=document.createElement("span");
+      icon.className="icon";
+      icon.textContent=app.icon||"◼";
+
+      const wrap=document.createElement("span");
+
+      const name=document.createElement("div");
+      name.className="name";
+      name.textContent=app.name||"App";
+
+      const sub=document.createElement("div");
+      sub.className="sub";
+      sub.textContent=
+        status==="maintenance"
+          ? "Maintenance"
+          : (app.description||"");
+
+      wrap.append(name,sub);
+      b.append(icon,wrap);
+
+      b.onclick=()=>openApp(app);
+      box.appendChild(b);
     }
-  }catch(e){err.textContent=e.message;err.style.display="block"}
+  }catch(error){
+    err.textContent=error.message;
+    err.style.display="block";
+    console.warn(error);
+  }
 }
-loadPosts();
-loadApps();
+
+async function startHome(){
+  showNamePrompt();
+
+  await Promise.allSettled([
+    loadPosts(),
+    loadApps()
+  ]);
+
+  document.getElementById("loading").style.display="none";
+}
+
+startHome();
 </script>
+
 </body>
 </html>
