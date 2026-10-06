@@ -500,11 +500,19 @@ async function openApp(app){
       const src=oldScript.getAttribute("src");
       if(src){
         const absoluteURL=new URL(src,baseURL).href;
-        const jsResponse=await fetch(absoluteURL+"?t="+Date.now(),{cache:"no-store"});
-        if(!jsResponse.ok){
-          throw new Error("App script could not be loaded: "+absoluteURL);
+
+        if(absoluteURL.startsWith(REPO)){
+          const jsResponse=await fetch(absoluteURL+"?t="+Date.now(),{cache:"no-store"});
+          if(!jsResponse.ok){
+            throw new Error("App script could not be loaded: "+absoluteURL);
+          }
+          script.textContent=(await jsResponse.text())+"\n//# sourceURL="+absoluteURL;
+        }else{
+          // Third-party scripts (for example Tailwind CDN) should stay as
+          // normal external scripts. Fetching them ourselves can fail because
+          // of CORS, even though the browser can load them directly.
+          script.src=absoluteURL;
         }
-        script.textContent=(await jsResponse.text())+"\n//# sourceURL="+absoluteURL;
       }else{
         script.textContent=oldScript.textContent||"";
       }
@@ -533,11 +541,16 @@ async function openApp(app){
       const src=oldScript.getAttribute("src");
       if(src){
         const absoluteURL=new URL(src,baseURL).href;
-        const jsResponse=await fetch(absoluteURL+"?t="+Date.now(),{cache:"no-store"});
-        if(!jsResponse.ok){
-          throw new Error("App script could not be loaded: "+absoluteURL);
+
+        if(absoluteURL.startsWith(REPO)){
+          const jsResponse=await fetch(absoluteURL+"?t="+Date.now(),{cache:"no-store"});
+          if(!jsResponse.ok){
+            throw new Error("App script could not be loaded: "+absoluteURL);
+          }
+          script.textContent=(await jsResponse.text())+"\n//# sourceURL="+absoluteURL;
+        }else{
+          script.src=absoluteURL;
         }
-        script.textContent=(await jsResponse.text())+"\n//# sourceURL="+absoluteURL;
       }else{
         script.textContent=oldScript.textContent||"";
       }
