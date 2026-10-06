@@ -109,7 +109,9 @@ button,input,select{font:inherit}
   <div id="modal" role="dialog" aria-modal="true" aria-labelledby="settingsTitle">
     <h2 id="settingsTitle">Settings</h2>
 
-    <div class="field">
+<div class="field"><label>Username</label><div id="settingsUsername" style="padding:11px 12px;border-radius:9px;border:1px solid var(--border);background:var(--input);color:var(--text)">Not set</div></div>
+
+<div class="field">
       <label for="tabName">Tab name</label>
       <input id="tabName" type="text" maxlength="80" placeholder="LacesOS">
     </div>
@@ -330,6 +332,7 @@ document.getElementById("settingsBtn").onclick=()=>{
   const s=getSettings();
   tabName.value=s.tabName||"LacesOS";
   iconUrl.value=s.iconUrl||"";
+  document.getElementById("settingsUsername").textContent = localStorage.getItem(USERNAME_KEY) || "Not set";
   theme.value=s.theme||"dark";
   modalBack.style.display="flex";
   tabName.focus();
@@ -376,11 +379,25 @@ async function openApp(app){
     Direct navigation avoids document.open()/document.write(),
     which was one of the causes of the previous loop.
   */
-  window.location.href=
-    REPO+
-    app.file+
-    "?t="+
-    Date.now();
+  try{
+    const response=await fetch(
+      REPO+app.file+"?t="+Date.now(),
+      {cache:"no-store"}
+    );
+
+    if(!response.ok){
+      throw new Error("App could not be loaded ("+response.status+").");
+    }
+
+    const source=await response.text();
+
+    const blob=new Blob([source],{type:"text/html"});
+    const url=URL.createObjectURL(blob);
+
+    window.location.href=url;
+  }catch(error){
+    alert(error.message);
+  }
 }
 
 async function loadPosts(){
