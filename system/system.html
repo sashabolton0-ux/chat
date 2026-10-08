@@ -312,6 +312,26 @@ function getDeviceId(){
   return id;
 }
 
+
+async function isAiChatAllowedOnThisDevice(){
+  try{
+    const result = await supabaseRequest("/functions/v1/ai-gateway", {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({
+        action: "status",
+        device_id: getDeviceId(),
+        username: localStorage.getItem(USERNAME_KEY) || ""
+      })
+    });
+
+    return result?.allowed === true;
+  }catch(error){
+    console.warn("AI Chat access check failed; keeping the app hidden.", error);
+    return false;
+  }
+}
+
 async function registerDevice(username){
   try{
     await supabaseRequest("/rest/v1/rpc/register_device",{
@@ -557,8 +577,14 @@ async function loadApps(){
 
     box.innerHTML="";
 
+    
     for(const app of (apps||[])){
       const status=String(app.status||"on").trim().toLowerCase();
+
+      if(String(app.id||"")==="ai-chat"){
+        const allowed=await isAiChatAllowedOnThisDevice();
+        if(!allowed)continue;
+      }
 
       if(status==="hidden")continue;
 
